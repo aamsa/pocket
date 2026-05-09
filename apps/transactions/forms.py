@@ -9,6 +9,7 @@ from .models import (
     TXN_KIND_CHOICES,
     Category,
     Transaction,
+    Transfer,
 )
 
 
@@ -96,12 +97,60 @@ class CategoryForm(forms.ModelForm):
         return obj
 
 
+class TransferForm(forms.ModelForm):
+    amount = forms.DecimalField(
+        max_digits=14,
+        decimal_places=0,
+        min_value=1,
+        widget=forms.NumberInput(
+            attrs={"class": input_class, "inputmode": "numeric", "placeholder": "0"}
+        ),
+    )
+
+    class Meta:
+        model = Transfer
+        fields = ["from_pocket", "to_pocket", "amount", "occurred_on", "notes"]
+        widgets = {
+            "from_pocket": forms.Select(attrs={"class": input_class}),
+            "to_pocket": forms.Select(attrs={"class": input_class}),
+            "occurred_on": forms.DateInput(attrs={"class": input_class, "type": "date"}),
+            "notes": forms.TextInput(
+                attrs={"class": input_class, "placeholder": "Optional"}
+            ),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        if not self.is_bound and not self.initial.get("occurred_on"):
+            self.initial["occurred_on"] = date.today().isoformat()
+        if user is not None:
+            qs = Pocket.objects.owned_by(user).active()
+            self.fields["from_pocket"].queryset = qs
+            self.fields["to_pocket"].queryset = qs
+
+    def clean(self):
+        cleaned = super().clean()
+        f, t = cleaned.get("from_pocket"), cleaned.get("to_pocket")
+        if f and t and f == t:
+            raise forms.ValidationError("From and To must be different pockets.")
+        return cleaned
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        if obj.created_by_id is None:
+            obj.created_by = self.user
+        if commit:
+            obj.save()
+        return obj
+
+
 class TransactionFilterForm(forms.Form):
     start = forms.DateField(required=False, widget=forms.DateInput(attrs={"class": input_class, "type": "date"}))
     end = forms.DateField(required=False, widget=forms.DateInput(attrs={"class": input_class, "type": "date"}))
     kind = forms.ChoiceField(
         required=False,
-        choices=[("", "All kinds")] + TXN_KIND_CHOICES,
+        choices=[("", "All kinds")] + TXN_KIND_CHOICES + [("transfer", "Transfer")],
         widget=forms.Select(attrs={"class": input_class}),
     )
     pocket = forms.ModelChoiceField(

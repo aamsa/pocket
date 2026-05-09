@@ -5,5 +5,6 @@ urlpatterns = [
     path("accounts/", include("apps.accounts.urls")),
     path("pockets/", include("apps.pockets.urls")),
     path("transactions/", include("apps.transactions.urls")),
+    path("transfers/", include("apps.transactions.transfer_urls")),
     path("reports/", include("apps.reports.urls")),
 ]

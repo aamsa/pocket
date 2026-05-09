@@ -29,11 +29,11 @@
             <span>Add Expense</span>
             <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
           </a>
-          <button class="btn-secondary justify-start" disabled>
+          <a href="{% url 'transfers:new' %}" class="btn-secondary justify-start">
             <i data-lucide="arrow-left-right" class="icon"></i>
             <span>Transfer</span>
-            <span class="ml-auto text-xs text-brand-500">Phase 5</span>
-          </button>
+            <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
+          </a>
           <button class="btn-ghost mt-1" @click="open = false">Cancel</button>
         </div>
       </div>
