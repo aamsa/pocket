@@ -4,6 +4,8 @@
 {% block title %}Dashboard · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
+  {% include "partials/messages.html" %}
+
   <div class="flex items-end justify-between mb-5">
     <div>
       <p class="text-sm text-brand-500">Welcome back,</p>
@@ -16,33 +18,76 @@
     </a>
   </div>
 
+  {% if pending_invites %}
+    <div class="card p-4 md:p-5 mb-5 flex items-center gap-3 bg-brand-100/60 border-brand-200">
+      <i data-lucide="inbox" class="w-6 h-6 text-brand-700 stroke-[1.75] shrink-0"></i>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium text-brand-900">
+          You have {{ pending_invites|length }} pending invite{{ pending_invites|length|pluralize }}.
+        </div>
+        <div class="text-xs text-brand-600 truncate">
+          {% for s in pending_invites %}{{ s.pocket.name }} from {{ s.invited_by.profile.label }}{% if not forloop.last %} · {% endif %}{% endfor %}
+        </div>
+      </div>
+      <a href="{% url 'pockets:shares_inbox' %}" class="btn-secondary shrink-0">Open</a>
+    </div>
+  {% endif %}
+
   <section class="grid gap-3 md:gap-4 md:grid-cols-3 mb-6">
     <div class="card p-5">
       <div class="text-xs uppercase tracking-wider text-brand-500">Total balance</div>
-      <div class="mt-2 text-2xl font-semibold text-brand-900 num">{{ 0|rupiah }}</div>
-      <div class="text-xs text-brand-500 mt-1">Across all your pockets</div>
+      <div class="mt-2 text-2xl md:text-3xl font-semibold text-brand-900 num">{{ total_balance|rupiah }}</div>
+      <div class="text-xs text-brand-500 mt-1">
+        {{ own_count }} own pocket{{ own_count|pluralize }}{% if shared_count %} · {{ shared_count }} shared{% endif %}
+      </div>
     </div>
     <div class="card p-5">
-      <div class="text-xs uppercase tracking-wider text-brand-500">This month — income</div>
-      <div class="mt-2 text-2xl font-semibold text-income num">{{ 0|rupiah }}</div>
-      <div class="text-xs text-brand-500 mt-1">Once transactions land</div>
+      <div class="text-xs uppercase tracking-wider text-brand-500">{{ month_label }} — income</div>
+      <div class="mt-2 text-2xl md:text-3xl font-semibold text-income num">{{ income_total|rupiah }}</div>
+      <div class="text-xs text-brand-500 mt-1">Across all visible pockets</div>
     </div>
     <div class="card p-5">
-      <div class="text-xs uppercase tracking-wider text-brand-500">This month — expense</div>
-      <div class="mt-2 text-2xl font-semibold text-expense num">{{ 0|rupiah }}</div>
-      <div class="text-xs text-brand-500 mt-1">Once transactions land</div>
+      <div class="text-xs uppercase tracking-wider text-brand-500">{{ month_label }} — expense</div>
+      <div class="mt-2 text-2xl md:text-3xl font-semibold text-expense num">{{ expense_total|rupiah }}</div>
+      <div class="text-xs text-brand-500 mt-1">
+        Net:
+        <span class="num font-medium {% if income_total >= expense_total %}text-income{% else %}text-expense{% endif %}">
+          {% if income_total >= expense_total %}+{% else %}−{% endif %}{{ income_total|sub:expense_total|abs_value|rupiah }}
+        </span>
+      </div>
     </div>
   </section>
 
   <section class="card p-5 md:p-6">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-base font-semibold text-brand-900">Latest transactions</h2>
-      <a href="{% url 'transactions:index' %}" class="text-sm text-brand-700 hover:text-brand-900">View all</a>
+      <a href="{% url 'transactions:index' %}" class="text-sm text-brand-700 hover:text-brand-900">View all →</a>
     </div>
-    <div class="text-sm text-brand-500 py-10 text-center">
-      <i data-lucide="receipt-text" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-      <p>No transactions yet — add your first income or expense.</p>
-      <p class="text-xs text-brand-400 mt-1">Available once Phase 4 lands.</p>
-    </div>
+    {% if latest %}
+      <ul class="divide-y divide-brand-100 -mx-2">
+        {% for t in latest %}
+          <li class="flex items-center gap-3 px-2 py-2.5">
+            <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
+              <i data-lucide="{{ t.category.icon }}" class="icon"></i>
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-brand-900 truncate">{{ t.category.name }}</span>
+                <span class="text-xs text-brand-500 shrink-0">· {{ t.pocket.name }}</span>
+              </div>
+              <div class="text-xs text-brand-500 truncate">{{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}</div>
+            </div>
+            <div class="text-right shrink-0 num font-semibold {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
+              {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="text-sm text-brand-500 py-8 text-center">
+        <i data-lucide="receipt-text" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+        <p>No transactions yet — tap <span class="chip">+</span> to add the first one.</p>
+      </div>
+    {% endif %}
   </section>
 {% endblock %}

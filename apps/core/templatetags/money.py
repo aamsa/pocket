@@ -20,6 +20,22 @@ def rupiah(value):
     return f"{sign}Rp {formatted}"
 
 
+@register.filter(name="sub")
+def sub(value, arg):
+    try:
+        return Decimal(value or 0) - Decimal(arg or 0)
+    except Exception:
+        return 0
+
+
+@register.filter(name="abs_value")
+def abs_value(value):
+    try:
+        return abs(Decimal(value or 0))
+    except Exception:
+        return 0
+
+
 @register.filter(name="rupiah_plain")
 def rupiah_plain(value):
     """Render without the Rp prefix (e.g. for input fields)."""
