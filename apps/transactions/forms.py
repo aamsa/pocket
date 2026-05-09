@@ -3,6 +3,15 @@ from datetime import date
 from django import forms
 
 from apps.pockets.models import Pocket
+from apps.pockets.permissions import can_manage
+
+
+def _manageable_pockets(user):
+    """All active pockets the user can write to: owned + shared with manage."""
+    owned = list(Pocket.objects.owned_by(user).active())
+    shared = [p for p in Pocket.objects.active() if not p.owner_id == user.id and can_manage(user, p)]
+    ids = [p.id for p in owned + shared]
+    return Pocket.objects.filter(pk__in=ids).select_related("owner")
 
 from .models import (
     CATEGORY_KIND_INCOME,
@@ -57,7 +66,7 @@ class TransactionForm(forms.ModelForm):
 
         chosen_kind = self.initial.get("kind") or self.data.get("kind") or kind
         if user is not None:
-            self.fields["pocket"].queryset = Pocket.objects.owned_by(user).active()
+            self.fields["pocket"].queryset = _manageable_pockets(user)
             cat_qs = Category.objects.for_user(user).active()
             if chosen_kind:
                 cat_qs = cat_qs.filter(kind=chosen_kind)
@@ -125,7 +134,7 @@ class TransferForm(forms.ModelForm):
         if not self.is_bound and not self.initial.get("occurred_on"):
             self.initial["occurred_on"] = date.today().isoformat()
         if user is not None:
-            qs = Pocket.objects.owned_by(user).active()
+            qs = _manageable_pockets(user)
             self.fields["from_pocket"].queryset = qs
             self.fields["to_pocket"].queryset = qs
 

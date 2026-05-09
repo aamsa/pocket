@@ -100,9 +100,10 @@ TXN_KIND_CHOICES = [
 
 class TransactionQuerySet(models.QuerySet):
     def for_user(self, user):
-        """Transactions in any pocket the user owns (sharing-aware lookup
-        lands in Phase 6)."""
-        return self.filter(pocket__owner=user)
+        """Transactions in any pocket the user can view (owned or shared)."""
+        from apps.pockets.permissions import visible_pocket_ids
+
+        return self.filter(pocket_id__in=visible_pocket_ids(user))
 
     def in_period(self, start, end):
         qs = self

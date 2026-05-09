@@ -29,11 +29,14 @@ def index(request):
     form = TransactionFilterForm(request.GET or None, user=request.user)
     cleaned = form.cleaned_data if form.is_valid() else {}
 
-    txn_qs = Transaction.objects.for_user(request.user).select_related(
+    from apps.pockets.permissions import visible_pocket_ids
+
+    visible_ids = visible_pocket_ids(request.user)
+    txn_qs = Transaction.objects.filter(pocket_id__in=visible_ids).select_related(
         "pocket", "category", "created_by"
     )
     transfer_qs = Transfer.objects.filter(
-        from_pocket__owner=request.user
+        Q(from_pocket_id__in=visible_ids) | Q(to_pocket_id__in=visible_ids)
     ).select_related("from_pocket", "to_pocket", "created_by")
 
     if cleaned.get("start"):

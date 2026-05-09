@@ -2,7 +2,13 @@
 
 from decimal import Decimal
 
-from .models import Pocket
+from django.contrib.auth import get_user_model
+
+from .models import (
+    SHARE_STATUS_ACCEPTED,
+    Pocket,
+    PocketShare,
+)
 
 
 def user_pocket_tree(user):
@@ -25,6 +31,44 @@ def user_pocket_tree(user):
 
     walk(None, 0)
     return rows
+
+
+def shared_pocket_groups(user):
+    """Return a list of {'owner', 'rows': [(pocket, depth)], 'permission'} dicts
+    for pockets shared with `user`. Each shared root pocket forms its own
+    sub-tree, with children also displayed if they exist."""
+    shares = (
+        PocketShare.objects.filter(shared_with=user, status=SHARE_STATUS_ACCEPTED)
+        .select_related("pocket", "pocket__owner", "pocket__owner__profile")
+    )
+    if not shares:
+        return []
+
+    # Walk descendants per share via in-memory tree walk over owner's pockets.
+    groups_by_owner = {}
+    for share in shares:
+        root = share.pocket
+        if root.archived_at is not None:
+            continue
+        owner = root.owner
+        siblings = list(Pocket.objects.owned_by(owner).active())
+        by_parent = {}
+        for p in siblings:
+            by_parent.setdefault(p.parent_id, []).append(p)
+
+        rows = []
+
+        def walk(node, depth):
+            rows.append((node, depth, share.permission))
+            for child in sorted(
+                by_parent.get(node.id, []), key=lambda p: p.name.lower()
+            ):
+                walk(child, depth + 1)
+
+        walk(root, 0)
+        groups_by_owner.setdefault(owner.id, {"owner": owner, "rows": []})["rows"].extend(rows)
+
+    return list(groups_by_owner.values())
 
 
 def balance_for(pocket, *, include_descendants=False, as_of=None):

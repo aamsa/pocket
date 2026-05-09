@@ -43,17 +43,24 @@
     </div>
 
     <div class="flex flex-wrap gap-2 mt-5">
-      <a href="{% url 'pockets:edit' pocket.id %}" class="btn-secondary">
-        <i data-lucide="pencil" class="icon"></i> Edit
-      </a>
-      {% if not pocket.is_main %}
-        <form method="post" action="{% url 'pockets:archive' pocket.id %}">{% csrf_token %}
-          <button type="submit"
-                  class="btn-ghost text-expense hover:bg-expense/10"
-                  onclick="return confirm('Archive “{{ pocket.name }}”?');">
-            <i data-lucide="archive" class="icon"></i> Archive
-          </button>
-        </form>
+      {% if pocket.owner_id == user.id %}
+        <a href="{% url 'pockets:edit' pocket.id %}" class="btn-secondary">
+          <i data-lucide="pencil" class="icon"></i> Edit
+        </a>
+        <a href="{% url 'pockets:share' pocket.id %}" class="btn-secondary">
+          <i data-lucide="users" class="icon"></i> Share
+        </a>
+        {% if not pocket.is_main %}
+          <form method="post" action="{% url 'pockets:archive' pocket.id %}">{% csrf_token %}
+            <button type="submit"
+                    class="btn-ghost text-expense hover:bg-expense/10"
+                    onclick="return confirm('Archive “{{ pocket.name }}”?');">
+              <i data-lucide="archive" class="icon"></i> Archive
+            </button>
+          </form>
+        {% endif %}
+      {% else %}
+        <span class="chip">Shared by {{ pocket.owner.profile.label }}</span>
       {% endif %}
     </div>
   </div>

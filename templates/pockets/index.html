@@ -11,10 +11,19 @@
       <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Pockets</h1>
       <p class="text-sm text-brand-500 mt-1">Where your money lives — group accounts however you like.</p>
     </div>
-    <a href="{% url 'pockets:new' %}" class="btn-primary">
-      <i data-lucide="plus" class="icon"></i>
-      <span class="hidden md:inline">New pocket</span>
-    </a>
+    <div class="flex items-center gap-2">
+      {% if pending_invite_count %}
+        <a href="{% url 'pockets:shares_inbox' %}" class="btn-ghost relative">
+          <i data-lucide="inbox" class="icon"></i>
+          <span class="hidden md:inline">Invites</span>
+          <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-brand-700 text-brand-50 text-[10px] font-semibold grid place-items-center">{{ pending_invite_count }}</span>
+        </a>
+      {% endif %}
+      <a href="{% url 'pockets:new' %}" class="btn-primary">
+        <i data-lucide="plus" class="icon"></i>
+        <span class="hidden md:inline">New pocket</span>
+      </a>
+    </div>
   </div>
 
   {% if rows %}
@@ -53,5 +62,39 @@
       <i data-lucide="wallet" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
       <p>No pockets yet — your Main pocket should appear here on first login.</p>
     </div>
+  {% endif %}
+
+  {% if shared_groups %}
+    <h2 class="text-sm font-semibold text-brand-700 uppercase tracking-wide mt-8 mb-3">Shared with you</h2>
+    {% for group in shared_groups %}
+      <div class="mb-4">
+        <div class="text-xs text-brand-500 mb-2">From {{ group.owner.profile.label }}</div>
+        <ul class="card divide-y divide-brand-100 overflow-hidden">
+          {% for row in group.rows %}
+            {% with p=row.pocket %}
+              <li>
+                <a href="{% url 'pockets:detail' p.id %}"
+                   class="flex items-center gap-3 px-4 py-3 hover:bg-brand-50/60 transition"
+                   style="padding-left: calc(1rem + {{ row.depth }} * 1.25rem)">
+                  <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ p.color_token }}">
+                    <i data-lucide="{{ p.icon }}" class="icon"></i>
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium text-brand-900 truncate">{{ p.name }}</span>
+                      <span class="chip">{% if row.permission == 'manage' %}Manage{% else %}View{% endif %}</span>
+                    </div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="font-semibold text-brand-900 num">{{ row.balance|rupiah }}</div>
+                  </div>
+                  <i data-lucide="chevron-right" class="icon text-brand-400 shrink-0"></i>
+                </a>
+              </li>
+            {% endwith %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
   {% endif %}
 {% endblock %}

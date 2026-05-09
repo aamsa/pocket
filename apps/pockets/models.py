@@ -114,3 +114,62 @@ class Pocket(models.Model):
 
     def descendant_ids_with_self(self):
         return [self.id, *(d.id for d in self.descendants())]
+
+    def ancestor_ids_with_self(self):
+        return [self.id, *(a.id for a in self.ancestors())]
+
+
+# ---------------------------------------------------------------------------
+# Sharing
+# ---------------------------------------------------------------------------
+
+SHARE_PERMISSION_VIEW = "view"
+SHARE_PERMISSION_MANAGE = "manage"
+SHARE_PERMISSION_CHOICES = [
+    (SHARE_PERMISSION_VIEW, "View only"),
+    (SHARE_PERMISSION_MANAGE, "View and manage"),
+]
+
+SHARE_STATUS_PENDING = "pending"
+SHARE_STATUS_ACCEPTED = "accepted"
+SHARE_STATUS_DECLINED = "declined"
+SHARE_STATUS_REVOKED = "revoked"
+SHARE_STATUS_CHOICES = [
+    (SHARE_STATUS_PENDING, "Pending"),
+    (SHARE_STATUS_ACCEPTED, "Accepted"),
+    (SHARE_STATUS_DECLINED, "Declined"),
+    (SHARE_STATUS_REVOKED, "Revoked"),
+]
+
+
+class PocketShare(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    pocket = models.ForeignKey(Pocket, on_delete=models.CASCADE, related_name="shares")
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="shares_sent",
+    )
+    shared_with = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="shares_received",
+    )
+    permission = models.CharField(max_length=10, choices=SHARE_PERMISSION_CHOICES)
+    status = models.CharField(
+        max_length=10, choices=SHARE_STATUS_CHOICES, default=SHARE_STATUS_PENDING
+    )
+    invited_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-invited_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pocket", "shared_with"],
+                name="pocketshare_unique_pocket_user",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.pocket.name} → {self.shared_with} ({self.permission}/{self.status})"
