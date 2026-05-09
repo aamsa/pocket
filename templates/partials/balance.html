@@ -1,10 +1,10 @@
 {% load money %}{% comment %}
-Reusable amount + eye toggle.
+Reusable balance amount + eye toggle.
 
-Default-visible by design: both the amount and the eye icon render
-without JavaScript (CSS hides only the masked variant). Alpine state
-is inlined here — no Alpine.data() factory dependency — so a cached
-or stale app.js can't blank the card or break the click handler.
+Default state: HIDDEN. The wrapper carries `balance-hidden` statically so
+the masked `Rp ••••` renders even with no JavaScript at all. Alpine reads
+localStorage on init and removes `balance-hidden` only if the user has
+explicitly revealed this balance before.
 
 Params:
   amount     — Decimal/int passed through the rupiah filter
@@ -12,15 +12,15 @@ Params:
   text_class — optional Tailwind classes for size/weight/color (defaults: bold dark brown)
 {% endcomment %}<span x-data="{
        _k: 'pocket-balance-vis:{{ key }}',
-       visible: true,
-       init() { try { this.visible = localStorage.getItem(this._k) !== '0'; } catch (e) {} },
+       visible: false,
+       init() { try { this.visible = localStorage.getItem(this._k) === '1'; } catch (e) {} },
        toggle() {
          this.visible = !this.visible;
          try { localStorage.setItem(this._k, this.visible ? '1' : '0'); } catch (e) {}
        }
      }"
      :class="{ 'balance-hidden': !visible }"
-     class="balance inline-flex items-baseline gap-2"
+     class="balance balance-hidden inline-flex items-baseline gap-2"
 ><span class="balance-visible num {{ text_class|default:'font-semibold text-brand-900' }}">{{ amount|rupiah }}</span
 ><span class="balance-masked num {{ text_class|default:'font-semibold text-brand-900' }} tracking-widest select-none">Rp ••••</span
 ><button type="button" @click.stop.prevent="toggle()"

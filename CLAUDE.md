@@ -75,10 +75,12 @@ python manage.py setpassword <username>
 - **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function.
 - **ApexCharts**: build the full options dict server-side (in `apps/reports/services.py`), pass through `json_script`, hydrate in `static/js/app.js` on `htmx:afterSwap` so charts re-render cleanly through swaps. Add `_format: "rupiah"` to apply the IDR axis/tooltip formatter.
 - **Dynamic Tailwind classes** like `bg-{{ pocket.color_token }}` need to appear in the `@source inline(...)` safelist in `input.css` since the scanner can't see them.
-- **Pocket balances** (any prominent total figure) should be rendered through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace.
+- **Balance figures** — strictly *balance* totals — should be rendered through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace.
+  - **Default is HIDDEN.** The wrapper renders with `balance-hidden` statically; Alpine removes it only when localStorage records `'1'` for the key. So the user always sees `Rp ••••` first and reveals deliberately.
   - Build the key with `{% balance_key "pocket" pocket.id "downstream" as bkey %}` (from `apps.core.templatetags.money`) — Django's stock `add` filter can't concat `str + UUID`, so don't try `"pocket:"|add:p.id`.
-  - Re-using the same key on multiple pages (e.g. `pocket:<uuid>:downstream` on both pockets-index and pocket-detail) is intentional — the user expects hiding a pocket on one page to keep it hidden on the other.
-  - Out of scope by user decision: transaction-row amounts, transfer rows, transactions filter list, reports charts/lists, transaction form input. Don't add eyes to these without asking first.
+  - Re-using the same key on multiple pages (e.g. `pocket:<uuid>:downstream` on both pockets-index and pocket-detail) is intentional — the user expects revealing a pocket on one page to also reveal it on the other.
+  - **Scope is balances only.** Use the partial for: the Dashboard *Total Balance* card, every pocket-row balance on the Pockets list, the two balance cards on the Pocket detail page. **Do NOT use it for** the Dashboard income/expense aggregates, transaction-row amounts, transfer rows, transactions filter list, reports charts/lists, transaction form input. The user explicitly excluded these — don't add eyes there without asking first.
+  - Alpine state is **inlined in the partial**, not registered via `Alpine.data()`. This was deliberate after a stale-cache incident on iOS Safari left the click handler dead. Keep it inline.
 
 ## Test users (dev DB)
 
