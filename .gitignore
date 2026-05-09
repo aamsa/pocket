@@ -22,3 +22,8 @@ static/css/output.css
 Thumbs.db
 .vscode/
 .idea/
+
+# AI tooling — installed per-developer via `npx skills add ...`.
+# Skills live in their own repos; re-install locally rather than commit.
+.agents/
+.claude/skills/

@@ -10,6 +10,16 @@ A private, mobile-first personal finance web app for two people (the owner and h
 - **Mobile-first.** Designs start at iPhone width; desktop is the layered enhancement (sidebar instead of bottom tabs).
 - **Brand palette only.** Cream-to-mocha browns from `docs/colors.png`, mapped to `--color-brand-{50..900}` in `static/css/input.css`. Income uses `#5C8A4E` (sage), expense uses `#9C3D2E` (terracotta) — those are the only two off-palette accents allowed.
 
+## Installed skills
+
+The project's recommended skills are pinned in `skills-lock.json` (committed). The skill content itself is gitignored — install per-machine with `npx skills add <repo>` (it reads the lock for hash verification).
+
+- **`emil-design-eng`** (Emil Kowalski's design-engineering skill). Use proactively when reviewing or polishing UI — animation timing, transition curves, transform-origin choices, the small details that make the brown/cream palette feel right.
+  - Install: `npx skills add emilkowalski/skill`
+  - Lives at `.agents/skills/emil-design-eng/SKILL.md`; a junction at `.claude/skills/emil-design-eng/` makes Claude Code's discovery pick it up.
+  - On Windows, the `.claude/skills/` junction needs to be recreated after a fresh install:
+    `New-Item -ItemType Junction -Path .claude\skills\emil-design-eng -Target .agents\skills\emil-design-eng`
+
 ## Stack
 
 - Django 5 (Python 3.14), HTMX 2 + Alpine 3 + ApexCharts via CDN
