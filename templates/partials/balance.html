@@ -1,21 +1,29 @@
 {% load money %}{% comment %}
 Reusable amount + eye toggle.
 
-Default-visible by design: the amount renders without JS, with CSS only
-hiding it when Alpine adds the `.balance-hidden` class on toggle. This
-avoids the "blank card" failure mode if Alpine is slow, errors out, or
-the cached app.js is stale (e.g. iOS Safari).
+Default-visible by design: both the amount and the eye icon render
+without JavaScript (CSS hides only the masked variant). Alpine state
+is inlined here — no Alpine.data() factory dependency — so a cached
+or stale app.js can't blank the card or break the click handler.
 
 Params:
   amount     — Decimal/int passed through the rupiah filter
   key        — stable identifier (e.g. "dashboard:total", "pocket:<uuid>:downstream")
   text_class — optional Tailwind classes for size/weight/color (defaults: bold dark brown)
-{% endcomment %}<span x-data="balanceToggle('{{ key }}')"
-      :class="{ 'balance-hidden': !visible }"
-      class="balance inline-flex items-baseline gap-2"
+{% endcomment %}<span x-data="{
+       _k: 'pocket-balance-vis:{{ key }}',
+       visible: true,
+       init() { try { this.visible = localStorage.getItem(this._k) !== '0'; } catch (e) {} },
+       toggle() {
+         this.visible = !this.visible;
+         try { localStorage.setItem(this._k, this.visible ? '1' : '0'); } catch (e) {}
+       }
+     }"
+     :class="{ 'balance-hidden': !visible }"
+     class="balance inline-flex items-baseline gap-2"
 ><span class="balance-visible num {{ text_class|default:'font-semibold text-brand-900' }}">{{ amount|rupiah }}</span
 ><span class="balance-masked num {{ text_class|default:'font-semibold text-brand-900' }} tracking-widest select-none">Rp ••••</span
-><button type="button" @click.stop.prevent="toggle"
+><button type="button" @click.stop.prevent="toggle()"
         class="self-center text-brand-300 hover:text-brand-700 transition shrink-0 p-1 -m-1 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-300/40"
         :aria-label="visible ? 'Hide amount' : 'Show amount'"
         tabindex="0">

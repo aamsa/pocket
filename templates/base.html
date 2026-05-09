@@ -8,13 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  <link rel="stylesheet" href="{% static 'css/output.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/output.css' %}?v={{ STATIC_VERSION }}" />
   <script src="https://unpkg.com/htmx.org@2.0.4" defer></script>
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/ext/loading-states.js" defer></script>
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/apexcharts@4" defer></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
-  <script src="{% static 'js/app.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}?v={{ STATIC_VERSION }}" defer></script>
   <script>
     // Single source of truth for chart colors, exposed to JSON in chart partials.
     window.theme = {
