@@ -4,7 +4,9 @@ from .base import *  # noqa: F401,F403
 from .base import BASE_DIR
 
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
+# Dev: accept any host so you can hit the server from your phone on the LAN.
+# (Tightened back down for prod.py.)
+ALLOWED_HOSTS = ["*"]
 
 DATABASES = {
     "default": {
