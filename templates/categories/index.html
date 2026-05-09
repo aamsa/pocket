@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Categories · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  {% include "partials/messages.html" %}
+
+  <div class="flex items-end justify-between mb-5">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Categories</h1>
+      <p class="text-sm text-brand-500 mt-1">Default tags ship with the app — add your own as needed.</p>
+    </div>
+    <a href="{% url 'transactions:category_new' %}" class="btn-primary">
+      <i data-lucide="plus" class="icon"></i>
+      <span class="hidden md:inline">New category</span>
+    </a>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <section class="card p-5">
+      <h2 class="text-sm font-semibold text-income uppercase tracking-wide mb-3">Income</h2>
+      <ul class="divide-y divide-brand-100 -mx-2">
+        {% for c in income_cats %}
+          <li class="flex items-center gap-3 px-2 py-2.5">
+            <span class="w-8 h-8 rounded-lg grid place-items-center text-brand-50 shrink-0 bg-{{ c.color_token }}">
+              <i data-lucide="{{ c.icon }}" class="w-4 h-4"></i>
+            </span>
+            <span class="flex-1 truncate text-brand-900">{{ c.name }}</span>
+            {% if c.is_default %}
+              <span class="chip">Default</span>
+            {% else %}
+              <a href="{% url 'transactions:category_edit' c.id %}" class="text-xs text-brand-600 hover:text-brand-900">Edit</a>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="text-sm font-semibold text-expense uppercase tracking-wide mb-3">Expense</h2>
+      <ul class="divide-y divide-brand-100 -mx-2">
+        {% for c in expense_cats %}
+          <li class="flex items-center gap-3 px-2 py-2.5">
+            <span class="w-8 h-8 rounded-lg grid place-items-center text-brand-50 shrink-0 bg-{{ c.color_token }}">
+              <i data-lucide="{{ c.icon }}" class="w-4 h-4"></i>
+            </span>
+            <span class="flex-1 truncate text-brand-900">{{ c.name }}</span>
+            {% if c.is_default %}
+              <span class="chip">Default</span>
+            {% else %}
+              <a href="{% url 'transactions:category_edit' c.id %}" class="text-xs text-brand-600 hover:text-brand-900">Edit</a>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+{% endblock %}

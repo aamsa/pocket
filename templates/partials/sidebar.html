@@ -26,12 +26,12 @@
   <div class="mt-6 card p-4">
     <div class="text-xs uppercase tracking-wider text-brand-500 mb-2">Quick add</div>
     <div class="flex flex-col gap-2">
-      <button class="btn-secondary justify-start" disabled title="Coming in Phase 4">
+      <a href="{% url 'transactions:new' %}?kind=income" class="btn-secondary justify-start">
         <i data-lucide="trending-up" class="icon text-income"></i> Add Income
-      </button>
-      <button class="btn-secondary justify-start" disabled title="Coming in Phase 4">
+      </a>
+      <a href="{% url 'transactions:new' %}?kind=expense" class="btn-secondary justify-start">
         <i data-lucide="trending-down" class="icon text-expense"></i> Add Expense
-      </button>
+      </a>
       <button class="btn-secondary justify-start" disabled title="Coming in Phase 5">
         <i data-lucide="arrow-left-right" class="icon"></i> Transfer
       </button>

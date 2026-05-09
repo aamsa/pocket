@@ -19,16 +19,16 @@
                   shadow-pop animate-sheet-up">
         <div class="mx-auto h-1 w-10 rounded-full bg-brand-200 mb-4"></div>
         <div class="flex flex-col gap-2">
-          <button class="btn-secondary justify-start" disabled>
+          <a href="{% url 'transactions:new' %}?kind=income" class="btn-secondary justify-start">
             <i data-lucide="trending-up" class="icon text-income"></i>
             <span>Add Income</span>
-            <span class="ml-auto text-xs text-brand-500">Phase 4</span>
-          </button>
-          <button class="btn-secondary justify-start" disabled>
+            <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
+          </a>
+          <a href="{% url 'transactions:new' %}?kind=expense" class="btn-secondary justify-start">
             <i data-lucide="trending-down" class="icon text-expense"></i>
             <span>Add Expense</span>
-            <span class="ml-auto text-xs text-brand-500">Phase 4</span>
-          </button>
+            <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
+          </a>
           <button class="btn-secondary justify-start" disabled>
             <i data-lucide="arrow-left-right" class="icon"></i>
             <span>Transfer</span>
