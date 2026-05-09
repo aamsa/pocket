@@ -36,19 +36,25 @@
   <section class="grid gap-3 md:gap-4 md:grid-cols-3 mb-6">
     <div class="card p-5">
       <div class="text-xs uppercase tracking-wider text-brand-500">Total balance</div>
-      <div class="mt-2 text-2xl md:text-3xl font-semibold text-brand-900 num">{{ total_balance|rupiah }}</div>
+      <div class="mt-2">
+        {% include "partials/balance.html" with amount=total_balance key="dashboard:total" text_class="text-2xl md:text-3xl font-semibold text-brand-900" %}
+      </div>
       <div class="text-xs text-brand-500 mt-1">
         {{ own_count }} own pocket{{ own_count|pluralize }}{% if shared_count %} · {{ shared_count }} shared{% endif %}
       </div>
     </div>
     <div class="card p-5">
       <div class="text-xs uppercase tracking-wider text-brand-500">{{ month_label }} — income</div>
-      <div class="mt-2 text-2xl md:text-3xl font-semibold text-income num">{{ income_total|rupiah }}</div>
+      <div class="mt-2">
+        {% include "partials/balance.html" with amount=income_total key="dashboard:month-income" text_class="text-2xl md:text-3xl font-semibold text-income" %}
+      </div>
       <div class="text-xs text-brand-500 mt-1">Across all visible pockets</div>
     </div>
     <div class="card p-5">
       <div class="text-xs uppercase tracking-wider text-brand-500">{{ month_label }} — expense</div>
-      <div class="mt-2 text-2xl md:text-3xl font-semibold text-expense num">{{ expense_total|rupiah }}</div>
+      <div class="mt-2">
+        {% include "partials/balance.html" with amount=expense_total key="dashboard:month-expense" text_class="text-2xl md:text-3xl font-semibold text-expense" %}
+      </div>
       <div class="text-xs text-brand-500 mt-1">
         Net:
         <span class="num font-medium {% if income_total >= expense_total %}text-income{% else %}text-expense{% endif %}">

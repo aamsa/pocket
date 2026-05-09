@@ -25,8 +25,9 @@ apps/accounts/                         auth, UserProfile, force-password-change,
 apps/pockets/                          Pocket tree, PocketShare, permissions
 apps/transactions/                     Category, Transaction, Transfer (yes — Transfer model lives here)
 apps/reports/                          period filter + ApexCharts data builders
-apps/core/                             dashboard, money template tags, context processors
+apps/core/                             dashboard, money template tags (rupiah, balance_key), context processors
 templates/                             project-level (base.html + partials/, page templates)
+templates/partials/balance.html        amount + per-balance eye toggle (used everywhere a pocket balance is shown)
 static/css/input.css                   Tailwind v4 source — all design tokens defined here
 static/js/app.js                       HTMX/Alpine glue: chart hydration, x-rupiah directive
 docs/colors.png                        brand palette source
@@ -74,6 +75,10 @@ python manage.py setpassword <username>
 - **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function.
 - **ApexCharts**: build the full options dict server-side (in `apps/reports/services.py`), pass through `json_script`, hydrate in `static/js/app.js` on `htmx:afterSwap` so charts re-render cleanly through swaps. Add `_format: "rupiah"` to apply the IDR axis/tooltip formatter.
 - **Dynamic Tailwind classes** like `bg-{{ pocket.color_token }}` need to appear in the `@source inline(...)` safelist in `input.css` since the scanner can't see them.
+- **Pocket balances** (any prominent total figure) should be rendered through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace.
+  - Build the key with `{% balance_key "pocket" pocket.id "downstream" as bkey %}` (from `apps.core.templatetags.money`) — Django's stock `add` filter can't concat `str + UUID`, so don't try `"pocket:"|add:p.id`.
+  - Re-using the same key on multiple pages (e.g. `pocket:<uuid>:downstream` on both pockets-index and pocket-detail) is intentional — the user expects hiding a pocket on one page to keep it hidden on the other.
+  - Out of scope by user decision: transaction-row amounts, transfer rows, transactions filter list, reports charts/lists, transaction form input. Don't add eyes to these without asking first.
 
 ## Test users (dev DB)
 

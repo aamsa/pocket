@@ -36,6 +36,14 @@ def abs_value(value):
         return 0
 
 
+@register.simple_tag
+def balance_key(*parts):
+    """Build a colon-joined localStorage key for the balance toggle partial.
+    UUIDs and other non-strings are stringified safely (the {% add %} filter
+    can't concat str+UUID directly)."""
+    return ":".join(str(p) for p in parts)
+
+
 @register.filter(name="rupiah_plain")
 def rupiah_plain(value):
     """Render without the Rp prefix (e.g. for input fields)."""

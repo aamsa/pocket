@@ -29,14 +29,20 @@
         {% if pocket.notes %}
           <p class="text-sm text-brand-600 mt-1">{{ pocket.notes }}</p>
         {% endif %}
+        {% balance_key "pocket" pocket.id "own" as own_key %}
+        {% balance_key "pocket" pocket.id "downstream" as downstream_key %}
         <div class="grid grid-cols-2 gap-4 mt-4">
           <div>
             <div class="text-[11px] uppercase tracking-wider text-brand-500">This pocket</div>
-            <div class="text-2xl font-semibold text-brand-900 num">{{ own_balance|rupiah }}</div>
+            <div class="mt-0.5">
+              {% include "partials/balance.html" with amount=own_balance key=own_key text_class="text-2xl font-semibold text-brand-900" %}
+            </div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-brand-500">Downstream total</div>
-            <div class="text-2xl font-semibold text-brand-900 num">{{ downstream_balance|rupiah }}</div>
+            <div class="mt-0.5">
+              {% include "partials/balance.html" with amount=downstream_balance key=downstream_key text_class="text-2xl font-semibold text-brand-900" %}
+            </div>
           </div>
         </div>
       </div>

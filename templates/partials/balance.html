@@ -1,0 +1,15 @@
+{# Reusable amount + eye toggle. Hidden state persists in localStorage by `key`.
+   Params:
+     amount     — Decimal/int passed through the rupiah filter
+     key        — stable identifier (e.g. "dashboard:total", "pocket:<uuid>:downstream")
+     text_class — optional Tailwind classes for size/weight/color (defaults: bold dark brown)
+#}{% load money %}<span x-data="balanceToggle('{{ key }}')" class="inline-flex items-baseline gap-2"
+><span x-show="visible" class="num {{ text_class|default:'font-semibold text-brand-900' }}">{{ amount|rupiah }}</span
+><span x-show="!visible" x-cloak class="num {{ text_class|default:'font-semibold text-brand-900' }} tracking-widest select-none">Rp ••••</span
+><button type="button" @click.stop.prevent="toggle"
+         class="self-center text-brand-300 hover:text-brand-700 transition shrink-0 p-1 -m-1 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-300/40"
+         :aria-label="visible ? 'Hide amount' : 'Show amount'"
+         tabindex="0">
+  <i data-lucide="eye" class="w-4 h-4" x-show="visible"></i>
+  <i data-lucide="eye-off" class="w-4 h-4" x-show="!visible" x-cloak></i>
+</button></span>

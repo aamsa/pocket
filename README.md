@@ -16,6 +16,7 @@ Built with Django 5 + HTMX + Alpine.js + Tailwind v4 + ApexCharts. Single-develo
 - **Pocket sharing.** Invite another user to a pocket with `view` or `manage` permission. Sharing a parent implicitly shares descendants. Recipients accept or decline from an inbox.
 - **Period-filtered reports.** Week / This month / Last 3 months / This year / Custom range. Filter by pocket (with optional include-subtree). Four panels: income vs expense, spending by category donut, pocket balances area chart, top transactions.
 - **Mobile-first UI.** Bottom tab bar + center FAB on mobile, sidebar on desktop. IDR formatting (`Rp 1.250.000`) everywhere. Warm cream/brown brand palette taken from `docs/colors.png`.
+- **Per-balance hide/reveal.** Every pocket-balance figure (Dashboard summary cards, Pockets list, Pocket detail) has its own eye icon. Tap to mask the value as `Rp ••••`. Choice persists in `localStorage` per device, so navigating between pages or reloading keeps your hidden balances hidden. Transaction rows and report charts are intentionally untouched.
 
 ## Stack
 
@@ -152,3 +153,4 @@ These are explicitly deferred:
 | Add a new chart | `apps/reports/services.py` + `templates/reports/_panels.html` |
 | Change the IDR formatter | `apps/core/templatetags/money.py` and `static/js/app.js` |
 | Tweak the mobile shell | `templates/partials/{app_bar,bottom_tabs,fab,sidebar}.html` |
+| Add an eye toggle to another balance | `templates/partials/balance.html` (include with `key=` and optional `text_class=`) — keys live under `localStorage` namespace `pocket-balance-vis:` |

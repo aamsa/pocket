@@ -86,5 +86,22 @@
       el.addEventListener("blur", sync);
       sync();
     });
+
+    // Per-balance hide/reveal toggle. Used by templates/partials/balance.html.
+    // Visibility is tracked in localStorage under "pocket-balance-vis:<key>";
+    // default is visible, "0" means hidden.
+    window.Alpine.data("balanceToggle", function (key) {
+      var storeKey = "pocket-balance-vis:" + key;
+      return {
+        visible: true,
+        init: function () {
+          this.visible = localStorage.getItem(storeKey) !== "0";
+        },
+        toggle: function () {
+          this.visible = !this.visible;
+          localStorage.setItem(storeKey, this.visible ? "1" : "0");
+        },
+      };
+    });
   });
 })();

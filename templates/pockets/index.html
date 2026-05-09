@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load money %}
 
+
 {% block title %}Pockets · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
@@ -47,8 +48,9 @@
                   <div class="text-xs text-brand-500 truncate">{{ p.notes }}</div>
                 {% endif %}
               </div>
+              {% balance_key "pocket" p.id "downstream" as bkey %}
               <div class="text-right shrink-0">
-                <div class="font-semibold text-brand-900 num">{{ row.balance|rupiah }}</div>
+                {% include "partials/balance.html" with amount=row.balance key=bkey text_class="font-semibold text-brand-900" %}
                 <div class="text-[11px] text-brand-500 uppercase tracking-wider">downstream</div>
               </div>
               <i data-lucide="chevron-right" class="icon text-brand-400 shrink-0"></i>
@@ -85,8 +87,9 @@
                       <span class="chip">{% if row.permission == 'manage' %}Manage{% else %}View{% endif %}</span>
                     </div>
                   </div>
+                  {% balance_key "pocket" p.id "downstream" as bkey %}
                   <div class="text-right shrink-0">
-                    <div class="font-semibold text-brand-900 num">{{ row.balance|rupiah }}</div>
+                    {% include "partials/balance.html" with amount=row.balance key=bkey text_class="font-semibold text-brand-900" %}
                   </div>
                   <i data-lucide="chevron-right" class="icon text-brand-400 shrink-0"></i>
                 </a>
