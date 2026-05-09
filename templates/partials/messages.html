@@ -1,0 +1,21 @@
+{% if messages %}
+  <div class="flex flex-col gap-2 mb-4" x-data="{ open: true }" x-show="open">
+    {% for message in messages %}
+      <div role="status"
+           class="flex items-start gap-3 rounded-xl px-4 py-3 text-sm border
+                  {% if 'error' in message.tags %}
+                    bg-expense/10 border-expense/20 text-expense
+                  {% elif 'success' in message.tags %}
+                    bg-income/10 border-income/30 text-income
+                  {% else %}
+                    bg-brand-100 border-brand-200 text-brand-800
+                  {% endif %}">
+        <i data-lucide="{% if 'error' in message.tags %}alert-circle{% elif 'success' in message.tags %}check-circle-2{% else %}info{% endif %}" class="icon mt-0.5"></i>
+        <div class="flex-1">{{ message }}</div>
+        <button type="button" @click="open = false" class="opacity-60 hover:opacity-100" aria-label="Dismiss">
+          <i data-lucide="x" class="icon"></i>
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

@@ -1,16 +1,57 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}Pockets · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
+  {% include "partials/messages.html" %}
+
   <div class="flex items-end justify-between mb-5">
-    <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Pockets</h1>
-    <button class="btn-primary" disabled title="Phase 3">
-      <i data-lucide="plus" class="icon"></i> New pocket
-    </button>
+    <div>
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Pockets</h1>
+      <p class="text-sm text-brand-500 mt-1">Where your money lives — group accounts however you like.</p>
+    </div>
+    <a href="{% url 'pockets:new' %}" class="btn-primary">
+      <i data-lucide="plus" class="icon"></i>
+      <span class="hidden md:inline">New pocket</span>
+    </a>
   </div>
-  <div class="card p-10 text-center text-sm text-brand-500">
-    <i data-lucide="wallet" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-    <p>Pocket tree shows up here once Phase 3 lands.</p>
-  </div>
+
+  {% if rows %}
+    <ul class="card divide-y divide-brand-100 overflow-hidden">
+      {% for row in rows %}
+        {% with p=row.pocket %}
+          <li>
+            <a href="{% url 'pockets:detail' p.id %}"
+               class="flex items-center gap-3 px-4 py-3 hover:bg-brand-50/60 transition"
+               style="padding-left: calc(1rem + {{ row.depth }} * 1.25rem)">
+              <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0
+                           bg-{{ p.color_token }}">
+                <i data-lucide="{{ p.icon }}" class="icon"></i>
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-brand-900 truncate">{{ p.name }}</span>
+                  {% if p.is_main %}<span class="chip">Main</span>{% endif %}
+                </div>
+                {% if p.notes %}
+                  <div class="text-xs text-brand-500 truncate">{{ p.notes }}</div>
+                {% endif %}
+              </div>
+              <div class="text-right shrink-0">
+                <div class="font-semibold text-brand-900 num">{{ row.balance|rupiah }}</div>
+                <div class="text-[11px] text-brand-500 uppercase tracking-wider">downstream</div>
+              </div>
+              <i data-lucide="chevron-right" class="icon text-brand-400 shrink-0"></i>
+            </a>
+          </li>
+        {% endwith %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="card p-10 text-center text-sm text-brand-500">
+      <i data-lucide="wallet" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+      <p>No pockets yet — your Main pocket should appear here on first login.</p>
+    </div>
+  {% endif %}
 {% endblock %}
