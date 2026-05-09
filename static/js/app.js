@@ -12,6 +12,20 @@
     }
   }
 
+  function rupiah(n) {
+    var v = Math.round(Number(n) || 0);
+    var sign = v < 0 ? "-" : "";
+    return sign + "Rp " + Math.abs(v).toLocaleString("id-ID");
+  }
+
+  function applyFormatters(options) {
+    if (!options || options._format !== "rupiah") return options;
+    if (options.yaxis && options.yaxis.labels) options.yaxis.labels.formatter = rupiah;
+    options.tooltip = options.tooltip || {};
+    options.tooltip.y = Object.assign({}, options.tooltip.y, { formatter: rupiah });
+    return options;
+  }
+
   function hydrateCharts(root) {
     if (!window.ApexCharts) return;
     var nodes = (root || document).querySelectorAll("[data-apex-chart]");
@@ -24,7 +38,7 @@
       var dataNode = dataId ? document.getElementById(dataId) : null;
       if (!dataNode) return;
       try {
-        var options = JSON.parse(dataNode.textContent);
+        var options = applyFormatters(JSON.parse(dataNode.textContent));
         var chart = new ApexCharts(el, options);
         chart.render();
         el.__apexInstance = chart;

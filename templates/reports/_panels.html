@@ -1,0 +1,94 @@
+{% load money %}
+
+<div class="grid gap-4 md:grid-cols-2">
+
+  <section class="card p-5 md:p-6 md:col-span-2">
+    <h2 class="text-base font-semibold text-brand-900 mb-3">Income vs Expense</h2>
+    {% if income_vs_expense.has_data %}
+      {{ income_vs_expense.options|json_script:"chart-income-expense-data" }}
+      <div data-apex-chart data-source="chart-income-expense-data" class="w-full h-72"></div>
+    {% else %}
+      <div class="h-56 grid place-items-center text-sm text-brand-500">
+        <div class="text-center">
+          <i data-lucide="chart-no-axes-column" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+          <p>No transactions in this period.</p>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card p-5 md:p-6">
+    <h2 class="text-base font-semibold text-brand-900 mb-3">Spending by category</h2>
+    {% if spending_by_category.has_data %}
+      {{ spending_by_category.options|json_script:"chart-by-cat-data" }}
+      <div data-apex-chart data-source="chart-by-cat-data" class="w-full h-72"></div>
+    {% else %}
+      <div class="h-72 grid place-items-center text-sm text-brand-500">
+        <div class="text-center">
+          <i data-lucide="chart-pie" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+          <p>No expenses in this period.</p>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card p-5 md:p-6">
+    <h2 class="text-base font-semibold text-brand-900 mb-3">Pocket balances</h2>
+    {% if pocket_balances.has_data %}
+      {{ pocket_balances.options|json_script:"chart-balances-data" }}
+      <div data-apex-chart data-source="chart-balances-data" class="w-full h-72"></div>
+    {% else %}
+      <div class="h-72 grid place-items-center text-sm text-brand-500">
+        <p>No pockets in scope.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card p-5 md:p-6 md:col-span-2">
+    <h2 class="text-base font-semibold text-brand-900 mb-3">Top transactions</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <h3 class="text-xs font-medium text-income uppercase tracking-wide mb-2">Largest income</h3>
+        {% if top_transactions.top_income %}
+          <ul class="divide-y divide-brand-100">
+            {% for t in top_transactions.top_income %}
+              <li class="flex items-center gap-3 py-2.5">
+                <span class="w-8 h-8 rounded-lg grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
+                  <i data-lucide="{{ t.category.icon }}" class="w-4 h-4"></i>
+                </span>
+                <div class="flex-1 min-w-0 text-sm">
+                  <div class="text-brand-900 truncate">{{ t.category.name }} · {{ t.pocket.name }}</div>
+                  <div class="text-xs text-brand-500">{{ t.occurred_on|date:"d M Y" }}</div>
+                </div>
+                <div class="text-income num font-semibold text-sm">+{{ t.amount|rupiah }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-sm text-brand-500">No income in this period.</p>
+        {% endif %}
+      </div>
+      <div>
+        <h3 class="text-xs font-medium text-expense uppercase tracking-wide mb-2">Largest expense</h3>
+        {% if top_transactions.top_expense %}
+          <ul class="divide-y divide-brand-100">
+            {% for t in top_transactions.top_expense %}
+              <li class="flex items-center gap-3 py-2.5">
+                <span class="w-8 h-8 rounded-lg grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
+                  <i data-lucide="{{ t.category.icon }}" class="w-4 h-4"></i>
+                </span>
+                <div class="flex-1 min-w-0 text-sm">
+                  <div class="text-brand-900 truncate">{{ t.category.name }} · {{ t.pocket.name }}</div>
+                  <div class="text-xs text-brand-500">{{ t.occurred_on|date:"d M Y" }}</div>
+                </div>
+                <div class="text-expense num font-semibold text-sm">−{{ t.amount|rupiah }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-sm text-brand-500">No expenses in this period.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</div>
