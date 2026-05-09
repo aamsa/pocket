@@ -89,17 +89,25 @@
 
     // Per-balance hide/reveal toggle. Used by templates/partials/balance.html.
     // Visibility is tracked in localStorage under "pocket-balance-vis:<key>";
-    // default is visible, "0" means hidden.
+    // default is visible, "0" means hidden. localStorage is wrapped in
+    // try/catch — iOS Safari Private mode and rare embedded webviews throw
+    // SecurityError when accessed.
+    function safeGetItem(k) {
+      try { return localStorage.getItem(k); } catch (e) { return null; }
+    }
+    function safeSetItem(k, v) {
+      try { localStorage.setItem(k, v); } catch (e) { /* swallow */ }
+    }
     window.Alpine.data("balanceToggle", function (key) {
       var storeKey = "pocket-balance-vis:" + key;
       return {
         visible: true,
         init: function () {
-          this.visible = localStorage.getItem(storeKey) !== "0";
+          this.visible = safeGetItem(storeKey) !== "0";
         },
         toggle: function () {
           this.visible = !this.visible;
-          localStorage.setItem(storeKey, this.visible ? "1" : "0");
+          safeSetItem(storeKey, this.visible ? "1" : "0");
         },
       };
     });

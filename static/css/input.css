@@ -99,3 +99,12 @@
 /* HTMX swap fade so partials don't pop */
 .htmx-swapping  { opacity: 0; transition: opacity .12s ease-out; }
 .htmx-settling  { opacity: 1; transition: opacity .12s ease-in; }
+
+/* Per-balance eye toggle: amount visible by default (no JS needed).
+   Alpine only adds .balance-hidden when toggled off. */
+.balance .balance-masked,
+.balance .balance-eye-hide { display: none; }
+.balance.balance-hidden .balance-visible,
+.balance.balance-hidden .balance-eye-show { display: none; }
+.balance.balance-hidden .balance-masked { display: inline; }
+.balance.balance-hidden .balance-eye-hide { display: inline-block; }

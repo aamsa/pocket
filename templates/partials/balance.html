@@ -1,16 +1,24 @@
 {% load money %}{% comment %}
-Reusable amount + eye toggle. Hidden state persists in localStorage by `key`.
+Reusable amount + eye toggle.
+
+Default-visible by design: the amount renders without JS, with CSS only
+hiding it when Alpine adds the `.balance-hidden` class on toggle. This
+avoids the "blank card" failure mode if Alpine is slow, errors out, or
+the cached app.js is stale (e.g. iOS Safari).
+
 Params:
   amount     — Decimal/int passed through the rupiah filter
   key        — stable identifier (e.g. "dashboard:total", "pocket:<uuid>:downstream")
   text_class — optional Tailwind classes for size/weight/color (defaults: bold dark brown)
-{% endcomment %}<span x-data="balanceToggle('{{ key }}')" class="inline-flex items-baseline gap-2"
-><span x-show="visible" class="num {{ text_class|default:'font-semibold text-brand-900' }}">{{ amount|rupiah }}</span
-><span x-show="!visible" x-cloak class="num {{ text_class|default:'font-semibold text-brand-900' }} tracking-widest select-none">Rp ••••</span
+{% endcomment %}<span x-data="balanceToggle('{{ key }}')"
+      :class="{ 'balance-hidden': !visible }"
+      class="balance inline-flex items-baseline gap-2"
+><span class="balance-visible num {{ text_class|default:'font-semibold text-brand-900' }}">{{ amount|rupiah }}</span
+><span class="balance-masked num {{ text_class|default:'font-semibold text-brand-900' }} tracking-widest select-none">Rp ••••</span
 ><button type="button" @click.stop.prevent="toggle"
-         class="self-center text-brand-300 hover:text-brand-700 transition shrink-0 p-1 -m-1 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-300/40"
-         :aria-label="visible ? 'Hide amount' : 'Show amount'"
-         tabindex="0">
-  <i data-lucide="eye" class="w-4 h-4" x-show="visible"></i>
-  <i data-lucide="eye-off" class="w-4 h-4" x-show="!visible" x-cloak></i>
+        class="self-center text-brand-300 hover:text-brand-700 transition shrink-0 p-1 -m-1 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-300/40"
+        :aria-label="visible ? 'Hide amount' : 'Show amount'"
+        tabindex="0">
+  <i data-lucide="eye"     class="balance-eye-show w-4 h-4"></i>
+  <i data-lucide="eye-off" class="balance-eye-hide w-4 h-4"></i>
 </button></span>
