@@ -24,7 +24,7 @@
         <label class="flex flex-col gap-1.5">
           <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
           {{ field }}
-          {% if field.help_text %}<span class="text-xs text-brand-500">{{ field.help_text|safe }}</span>{% endif %}
+          {% if field.help_text %}<span class="text-xs text-brand-600">{{ field.help_text|safe }}</span>{% endif %}
           {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
         </label>
       {% endfor %}

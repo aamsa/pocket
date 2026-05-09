@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-09T14:30:00Z",
+  "title": "Design System: Pocket",
+  "extensions": {
+    "colorMeta": {
+      "buttercream":   { "role": "neutral",  "displayName": "Buttercream",   "canonical": "#FFEDD8", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "linen":         { "role": "neutral",  "displayName": "Linen",         "canonical": "#F3D5B5", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "sand":          { "role": "neutral",  "displayName": "Sand",          "canonical": "#E7BC91", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "caramel":       { "role": "neutral",  "displayName": "Caramel",       "canonical": "#D4A276", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "hazelnut":      { "role": "neutral",  "displayName": "Hazelnut",      "canonical": "#BC8A5F", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "tobacco":       { "role": "neutral",  "displayName": "Tobacco",       "canonical": "#A47148", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "coffee":        { "role": "neutral",  "displayName": "Coffee",        "canonical": "#8B5E34", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "cocoa":         { "role": "primary",  "displayName": "Cocoa",         "canonical": "#6F4518", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#6F4518"] },
+      "espresso":      { "role": "primary",  "displayName": "Espresso",      "canonical": "#603808", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#603808"] },
+      "walnut":        { "role": "neutral",  "displayName": "Walnut",        "canonical": "#583101", "tonalRamp": ["#FFEDD8", "#F3D5B5", "#E7BC91", "#D4A276", "#BC8A5F", "#A47148", "#8B5E34", "#583101"] },
+      "mossbank":      { "role": "tertiary", "displayName": "Mossbank Sage", "canonical": "#5C8A4E", "tonalRamp": ["#EFF5EC", "#D8E5D1", "#BFD3B5", "#A1BD93", "#82A772", "#688E59", "#5C8A4E", "#3E5F33"] },
+      "terracotta":    { "role": "tertiary", "displayName": "Terracotta",    "canonical": "#9C3D2E", "tonalRamp": ["#F8E4DF", "#EFC2B8", "#E29B8B", "#D2735F", "#B8503D", "#9C3D2E", "#7E3024", "#5A211A"] }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "Page-title H1 on top-level routes (Dashboard, Pockets, Reports). Negative tracking pulls the form together at scale." },
+      "headline": { "displayName": "Headline", "purpose": "Mobile-width page H1; tighter than Display because phone screens compress hierarchy." },
+      "title":    { "displayName": "Title",    "purpose": "Card titles and section labels above lists." },
+      "body":     { "displayName": "Body",     "purpose": "All running text, transaction descriptions, form labels-as-prose. Cap at ~70ch in long-form." },
+      "label":    { "displayName": "Label",    "purpose": "Uppercase micro-labels (INCOME, DOWNSTREAM). Sparingly applied; over-use erodes the warm voice." },
+      "numeric":  { "displayName": "Numeric",  "purpose": "Every currency figure. Tabular-nums non-negotiable so digits align vertically across rows." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px 0 rgb(88 49 1 / 0.04), 0 1px 3px 0 rgb(88 49 1 / 0.08)", "purpose": "Resting elevation of every card. Tinted toward walnut, never neutral grey. Whisper level — slip of paper, not a UI panel." },
+      { "name": "pop",  "value": "0 8px 24px -6px rgb(88 49 1 / 0.18)",                                "purpose": "Reserved for genuinely floating objects: the FAB, the rising bottom sheet, the login-page brand mark. Used precisely twice." }
+    ],
+    "motion": [
+      { "name": "ease-snap",   "value": "cubic-bezier(0.23, 1, 0.32, 1)",     "purpose": "UI default. Strong ease-out for buttons, dropdowns, popovers, HTMX swaps." },
+      { "name": "ease-glide",  "value": "cubic-bezier(0.77, 0, 0.175, 1)",   "purpose": "Strong ease-in-out for on-screen movement (drag, retargeted transitions)." },
+      { "name": "ease-drawer", "value": "cubic-bezier(0.32, 0.72, 0, 1)",     "purpose": "iOS-drawer curve, used only for the FAB bottom sheet's 280ms rise." },
+      { "name": "duration-press",   "value": "100ms",  "purpose": "Press feedback (scale on :active) for nav and rows." },
+      { "name": "duration-state",   "value": "160ms",  "purpose": "Default state transitions (button hover, color shifts)." },
+      { "name": "duration-popover", "value": "150ms",  "purpose": "Popover/dropdown enter; leave is 100ms (faster exit, slower enter)." },
+      { "name": "duration-sheet",   "value": "280ms",  "purpose": "FAB bottom-sheet rise and scrim fade." }
+    ],
+    "breakpoints": [
+      { "name": "mobile",  "value": "320px",  "purpose": "Mobile-first design starts here (iPhone width)." },
+      { "name": "md",      "value": "768px",  "purpose": "Sidebar replaces bottom tabs; FAB hides." },
+      { "name": "lg",      "value": "1024px", "purpose": "Comfortable two-column grids on Reports panels." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "btn-primary",
+      "description": "Cocoa pill. The primary action on every page; the most-pressed control after the FAB.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;border-radius:9999px;padding:12px 20px;background:#6F4518;color:#FFEDD8;font:600 14px/1 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:normal;box-shadow:0 1px 2px 0 rgba(88,49,1,.04),0 1px 3px 0 rgba(88,49,1,.08);transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 160ms ease,box-shadow 160ms ease}.ds-btn-primary:hover{background:#603808}.ds-btn-primary:active{transform:scale(.98)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(212,162,118,.5),0 1px 2px 0 rgba(88,49,1,.04),0 1px 3px 0 rgba(88,49,1,.08)}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "btn-secondary",
+      "description": "Linen pill on cream. Calm secondary action; common in forms and the FAB sheet.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;border-radius:9999px;padding:12px 20px;background:#F3D5B5;color:#603808;font:500 14px/1 Inter,ui-sans-serif,system-ui,sans-serif;transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 160ms ease}.ds-btn-secondary:hover{background:#E7BC91}.ds-btn-secondary:active{transform:scale(.98)}.ds-btn-secondary:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(212,162,118,.5)}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "btn-ghost",
+      "description": "No background until hover. Header trigger, breadcrumb, dismiss action.",
+      "html": "<button class=\"ds-btn-ghost\">Profile</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;border-radius:9999px;padding:8px 16px;background:transparent;color:#6F4518;font:500 14px/1 Inter,ui-sans-serif,system-ui,sans-serif;transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 160ms ease}.ds-btn-ghost:hover{background:rgba(243,213,181,.8)}.ds-btn-ghost:active{transform:scale(.98)}.ds-btn-ghost:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(212,162,118,.4)}"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Cream-fill field on cream page; `sand` border supplies the only visual edge. Focus shifts the border to tobacco and adds a soft cocoa ring.",
+      "html": "<label class=\"ds-input-label\"><span>Notes</span><input class=\"ds-input\" type=\"text\" placeholder=\"Lunch with Ayu\" /></label>",
+      "css": ".ds-input-label{display:flex;flex-direction:column;gap:6px;font:500 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#6F4518;letter-spacing:.06em;text-transform:uppercase}.ds-input{width:100%;background:#FFEDD8;border:1px solid #E7BC91;border-radius:12px;padding:12px 16px;color:#583101;font:400 14px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;transition:border-color 160ms cubic-bezier(.23,1,.32,1),box-shadow 160ms cubic-bezier(.23,1,.32,1)}.ds-input::placeholder{color:#BC8A5F}.ds-input:focus{outline:none;border-color:#A47148;box-shadow:0 0 0 2px rgba(212,162,118,.4)}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White slip on cream. Whisper-shadow at rest. The contrast against `buttercream` is what makes it read as a card; never nest one inside another.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Total Balance</h3><div class=\"ds-card-amount\">Rp ••••</div><div class=\"ds-card-meta\">Across 4 pockets</div></div>",
+      "css": ".ds-card{background:#fff;border:1px solid #F3D5B5;border-radius:16px;padding:20px;box-shadow:0 1px 2px 0 rgba(88,49,1,.04),0 1px 3px 0 rgba(88,49,1,.08);color:#583101;font-family:Inter,ui-sans-serif,system-ui,sans-serif}.ds-card-title{margin:0 0 8px;font:500 12px/1.3 Inter;letter-spacing:.06em;text-transform:uppercase;color:#6F4518}.ds-card-amount{font:600 24px/1.2 Inter;font-variant-numeric:tabular-nums;letter-spacing:-.015em;color:#583101}.ds-card-meta{margin-top:6px;font:400 13px/1.4 Inter;color:#A47148}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Static descriptor (Manage, Default, Main). Linen pill with espresso text. No border, no shadow.",
+      "html": "<span class=\"ds-chip\">Manage</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:6px;background:#F3D5B5;color:#603808;border-radius:9999px;padding:4px 10px;font:500 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}"
+    },
+    {
+      "name": "Balance Toggle",
+      "kind": "custom",
+      "refersTo": "balance",
+      "description": "Signature component. Standing balance + per-balance eye toggle. Default state is HIDDEN — server HTML renders `Rp ••••` immediately. Alpine reads `localStorage` on init and reveals only if the user has tapped this exact key before. The Alpine state is inlined (not registered via Alpine.data()) — load-bearing after an iOS Safari stale-cache incident.",
+      "html": "<span class=\"ds-balance ds-balance-hidden\"><span class=\"ds-balance-visible\">Rp 4.250.000</span><span class=\"ds-balance-masked\">Rp ••••</span><button class=\"ds-balance-toggle\" aria-label=\"Show amount\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg></button></span>",
+      "css": ".ds-balance{display:inline-flex;align-items:baseline;gap:8px;font:600 16px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#583101}.ds-balance .ds-balance-masked,.ds-balance.ds-balance-hidden .ds-balance-visible{display:none}.ds-balance.ds-balance-hidden .ds-balance-masked{display:inline;letter-spacing:.1em;user-select:none}.ds-balance-toggle{align-self:center;display:inline-grid;place-items:center;background:transparent;border:0;cursor:pointer;color:#D4A276;padding:4px;margin:-4px;border-radius:9999px;transition:color 150ms cubic-bezier(.23,1,.32,1),transform 150ms cubic-bezier(.23,1,.32,1)}.ds-balance-toggle:hover{color:#6F4518}.ds-balance-toggle:active{transform:scale(.9)}.ds-balance-toggle:focus-visible{outline:none;box-shadow:0 0 0 2px rgba(212,162,118,.4)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Household Ledger",
+    "overview": "Pocket is a domestic record-keeping tool for two people, not a SaaS finance product. The system reads as a tidy notebook on a wooden desk in afternoon light: warm, present, considered. Every detail leans toward intimacy and patience — the curtain over balances by default, the unabbreviated Rp 1.250.000, the cream-to-mocha ramp pulled directly from a domestic palette study. The two-person scale matters: there are no marketing surfaces, no upsells, no growth metrics to optimise against. The interface earns trust by behaving consistently and saying only what needs saying. This system is forcefully anti-SaaS-fintech. It explicitly rejects the hero-metric template, the icon-and-heading card grid, the blue/teal banking palette, gradient accents, and animated glow. It also rejects the cool-grey Notion/Linear minimalism that 'clean' fintech often defaults to — the warmth of the brown ramp is the point, not a stylistic risk to hedge against.",
+    "keyCharacteristics": [
+      "One palette, held everywhere — cream-to-mocha browns, with sage and terracotta as the only off-palette accents (income / expense respectively).",
+      "Standing balances are private by default; reveal is a deliberate per-balance gesture that persists in localStorage.",
+      "Mobile-first geometry: bottom-tab nav and a center FAB on mobile, sidebar replaces tabs on desktop.",
+      "Numbers are tabular and unabbreviated. Rp 1.250.000, not 1.25M.",
+      "Motion is quiet — --ease-snap for UI, --ease-glide for on-screen movement, cubic-bezier(0.32, 0.72, 0, 1) only for the FAB sheet. No bounce, no elastic.",
+      "Surfaces are flat by default. Two purposeful elevations only: the resting card lift and the floating-object pop."
+    ],
+    "rules": [
+      { "name": "The Off-Palette Two Rule",     "section": "colors",     "body": "Sage #5C8A4E and terracotta #9C3D2E are the only colours outside the brown ramp that appear in the product. They are reserved exclusively for the income/expense semantics. Don't borrow them for accents, branding flourishes, or 'active state' visual effects." },
+      { "name": "The No-Pure-Black, No-Pure-White Rule", "section": "colors", "body": "Body text is walnut, never #000. Page surface is buttercream, never #fff. Card surfaces use literal white only because the contrast against buttercream is what defines a card." },
+      { "name": "The Tabular Currency Rule",    "section": "typography", "body": "Every IDR figure renders through the rupiah template filter and inherits font-variant-numeric: tabular-nums. Bare amounts without .num are forbidden — digits must align vertically across rows." },
+      { "name": "The Single-Voice Rule",        "section": "typography", "body": "Inter is the only typeface in the product. No serif H1 for editorial flair, no mono for data feel. The warmth budget is spent on colour and motion, not type." },
+      { "name": "The Two-Shadow Rule",          "section": "elevation",  "body": "Only --shadow-card and --shadow-pop exist. New shadows are forbidden. If you reach for a third elevation, the answer is almost always a tinted background or border, not another shadow token." },
+      { "name": "The Tinted-Shadow Rule",       "section": "elevation",  "body": "Every shadow uses rgb(88 49 1 / α) (i.e. tinted toward walnut). Pure-black shadows are forbidden — they read cold and break the warm cohesion the palette establishes." }
+    ],
+    "dos": [
+      "Do keep the cream-to-mocha brown ramp as the entire palette. New surfaces use existing shades; new accents do not exist.",
+      "Do render every standing balance through templates/partials/balance.html. The eye toggle is the central UX primitive of the product.",
+      "Do use tabular-nums (the .num utility) on every currency figure so digits column-align across rows.",
+      "Do use --ease-snap for UI transitions (160ms for state, 200ms for popovers) and --ease-glide for on-screen movement. Reach for --animate-sheet-up's iOS-drawer curve only for the FAB sheet.",
+      "Do use focus-visible: rings on buttons and focus: rings on form inputs. Mouse press should not leave a stuck ring; keyboard focus must be visible.",
+      "Do add active:scale-[.98] (or .96/.99 for nav rows) press feedback to every tappable surface. The product runs on phones; press feedback is non-negotiable.",
+      "Do treat --shadow-card as the resting elevation. --shadow-pop exists only for the FAB and the rising bottom sheet.",
+      "Do respect prefers-reduced-motion — :active transforms drop, slide-up entrances degrade to opacity-only fades. Comprehension cues stay; movement goes.",
+      "Do render currency unabbreviated — Rp 1.250.000, never 1.25M or Rp 1.25jt."
+    ],
+    "donts": [
+      "Don't ship the generic fintech SaaS template — hero-metric card, identical icon-and-heading card grid, blue/teal banking palette, gradient accents.",
+      "Don't ship crypto/neon dashboards — dark mode + neon accents, animated glow, Bloomberg-terminal density.",
+      "Don't drift toward Notion/Linear gray-on-white minimalism — cool greys, square corners, monospace data tables.",
+      "Don't use #000 or #fff directly. walnut for text; buttercream for page; card-surface (white) only inside the card component.",
+      "Don't introduce a third semantic colour. Income is sage, expense is terracotta, everything else is brown.",
+      "Don't use transition: all or bare transition — specify the exact properties and the easing token. Never animate width, height, padding, or margin.",
+      "Don't use ease-in on UI. It delays the moment the user is watching most.",
+      "Don't add gradient text, side-stripe borders, or glassmorphism.",
+      "Don't add the eye toggle to anything that isn't a standing balance.",
+      "Don't introduce nested cards.",
+      "Don't use animated icons, animated emoji, or any decorative motion.",
+      "Don't use the Django admin UI."
+    ]
+  }
+}

@@ -129,6 +129,13 @@ class Transaction(models.Model):
         on_delete=models.PROTECT,
         related_name="transactions_created",
     )
+    recurring_rule = models.ForeignKey(
+        "RecurringRule",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -186,3 +193,81 @@ class Transfer(models.Model):
                 name="transfer_pockets_distinct",
             ),
         ]
+
+
+# ---------------------------------------------------------------------------
+# Recurring rules — schedule future Transactions on a fixed cadence
+# ---------------------------------------------------------------------------
+
+FREQUENCY_DAILY = "daily"
+FREQUENCY_WEEKLY = "weekly"
+FREQUENCY_MONTHLY = "monthly"
+FREQUENCY_YEARLY = "yearly"
+FREQUENCY_CHOICES = [
+    (FREQUENCY_DAILY, "Daily"),
+    (FREQUENCY_WEEKLY, "Weekly"),
+    (FREQUENCY_MONTHLY, "Monthly"),
+    (FREQUENCY_YEARLY, "Yearly"),
+]
+
+
+class RecurringRule(models.Model):
+    """A repeating income/expense schedule. Materialises into Transaction rows
+    (one per occurrence) so reports, balances, and the projection dashboard
+    can treat scheduled future entries as ordinary Transactions.
+
+    Past-actual rows survive deletion of the rule (FK is SET_NULL on
+    Transaction.recurring_rule)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    kind = models.CharField(max_length=8, choices=TXN_KIND_CHOICES)
+    pocket = models.ForeignKey(
+        "pockets.Pocket", on_delete=models.PROTECT, related_name="recurring_rules"
+    )
+    category = models.ForeignKey(
+        Category, on_delete=models.PROTECT, related_name="recurring_rules"
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=0)
+    notes = models.CharField(max_length=500, blank=True)
+
+    frequency = models.CharField(max_length=8, choices=FREQUENCY_CHOICES)
+    interval = models.PositiveSmallIntegerField(default=1)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    occurrences = models.PositiveIntegerField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="recurring_rules_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-is_active", "-created_at"]
+        indexes = [
+            models.Index(fields=["pocket", "is_active"]),
+            models.Index(fields=["created_by", "is_active"]),
+        ]
+        constraints = [
+            CheckConstraint(condition=Q(amount__gt=0), name="recurring_amount_positive"),
+            CheckConstraint(condition=Q(interval__gte=1), name="recurring_interval_min1"),
+            CheckConstraint(
+                condition=Q(end_date__isnull=False) | Q(occurrences__isnull=False),
+                name="recurring_bounded",
+            ),
+        ]
+
+    def cadence_label(self):
+        """Human-friendly cadence summary — 'every month', 'every 2 weeks'."""
+        unit = {
+            FREQUENCY_DAILY: ("day", "days"),
+            FREQUENCY_WEEKLY: ("week", "weeks"),
+            FREQUENCY_MONTHLY: ("month", "months"),
+            FREQUENCY_YEARLY: ("year", "years"),
+        }[self.frequency]
+        if self.interval == 1:
+            return f"every {unit[0]}"
+        return f"every {self.interval} {unit[1]}"

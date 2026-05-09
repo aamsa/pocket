@@ -1,28 +1,28 @@
 {% with path=request.path %}
-<nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-brand-50/95 backdrop-blur border-t border-brand-100 tab-bar">
+<nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-brand-50 border-t border-brand-200 shadow-[0_-4px_16px_-8px_rgb(88_49_1_/_0.12)] tab-bar">
   <div class="grid grid-cols-5 max-w-md mx-auto">
     <a href="{% url 'core:dashboard' %}"
-       class="flex flex-col items-center gap-0.5 py-2 text-[11px]
-              {% if path == '/' %}text-brand-900{% else %}text-brand-500{% endif %}">
+       class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
+              {% if path == '/' %}text-brand-900{% else %}text-brand-600{% endif %}">
       <i data-lucide="layout-dashboard" class="icon"></i>
       <span>Home</span>
     </a>
     <a href="{% url 'pockets:index' %}"
-       class="flex flex-col items-center gap-0.5 py-2 text-[11px]
-              {% if '/pockets' in path %}text-brand-900{% else %}text-brand-500{% endif %}">
+       class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
+              {% if '/pockets' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
       <i data-lucide="wallet" class="icon"></i>
       <span>Pockets</span>
     </a>
     <span aria-hidden="true"></span>
     <a href="{% url 'reports:index' %}"
-       class="flex flex-col items-center gap-0.5 py-2 text-[11px]
-              {% if '/reports' in path %}text-brand-900{% else %}text-brand-500{% endif %}">
+       class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
+              {% if '/reports' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
       <i data-lucide="chart-pie" class="icon"></i>
       <span>Reports</span>
     </a>
     <a href="{% url 'accounts:profile' %}"
-       class="relative flex flex-col items-center gap-0.5 py-2 text-[11px]
-              {% if '/accounts/settings' in path %}text-brand-900{% else %}text-brand-500{% endif %}">
+       class="relative flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
+              {% if '/accounts/settings' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
       <i data-lucide="user" class="icon"></i>
       <span>More</span>
       {% if GLOBAL_PENDING_INVITES %}

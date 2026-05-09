@@ -29,9 +29,14 @@
   --shadow-card: 0 1px 2px 0 rgb(88 49 1 / 0.04), 0 1px 3px 0 rgb(88 49 1 / 0.08);
   --shadow-pop:  0 8px 24px -6px rgb(88 49 1 / 0.18);
 
-  --animate-fade-in:  fade-in 150ms ease-out;
-  --animate-slide-up: slide-up 180ms ease-out;
-  --animate-sheet-up: sheet-up 220ms cubic-bezier(.2,.8,.2,1);
+  /* Easing tokens. UI default is --ease-snap; on-screen movement uses --ease-glide.
+     Names avoid Tailwind's built-in ease-* utilities so both coexist. */
+  --ease-snap:  cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-glide: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --animate-fade-in:  fade-in 150ms var(--ease-snap);
+  --animate-slide-up: slide-up 180ms var(--ease-snap);
+  --animate-sheet-up: sheet-up 280ms cubic-bezier(0.32, 0.72, 0, 1);
 
   @keyframes fade-in  { 0% { opacity: 0; } 100% { opacity: 1; } }
   @keyframes slide-up { 0% { transform: translateY(8px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
@@ -63,25 +68,37 @@
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-700 text-brand-50
-           px-5 py-3 font-medium shadow-sm transition
-           hover:bg-brand-800 active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-brand-300/50
+           px-5 py-3 font-medium shadow-sm
+           hover:bg-brand-800 active:scale-[.98]
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/50
            disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: transform 160ms var(--ease-snap),
+                background-color 160ms ease,
+                box-shadow 160ms ease;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-100 text-brand-800
-           px-5 py-3 font-medium transition
-           hover:bg-brand-200 active:scale-[.98] focus:outline-none focus:ring-2 focus:ring-brand-300/50
+           px-5 py-3 font-medium
+           hover:bg-brand-200 active:scale-[.98]
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/50
            disabled:opacity-60 disabled:cursor-not-allowed;
+    transition: transform 160ms var(--ease-snap),
+                background-color 160ms ease;
   }
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-transparent text-brand-700
-           px-4 py-2 font-medium transition
-           hover:bg-brand-100/80 focus:outline-none focus:ring-2 focus:ring-brand-300/40;
+           px-4 py-2 font-medium
+           hover:bg-brand-100/80 active:scale-[.98]
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40;
+    transition: transform 160ms var(--ease-snap),
+                background-color 160ms ease;
   }
   .input {
     @apply w-full rounded-xl bg-brand-50 border border-brand-200 px-4 py-3
-           text-brand-900 placeholder-brand-400 transition
+           text-brand-900 placeholder-brand-400
            focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-300/40;
+    transition: border-color 160ms var(--ease-snap),
+                box-shadow 160ms var(--ease-snap);
   }
   .card {
     @apply bg-white border border-brand-100 rounded-2xl shadow-sm;
@@ -96,9 +113,22 @@
   }
 }
 
-/* HTMX swap fade so partials don't pop */
-.htmx-swapping  { opacity: 0; transition: opacity .12s ease-out; }
-.htmx-settling  { opacity: 1; transition: opacity .12s ease-in; }
+/* Nested-pocket row indent. Per-level step is tighter on mobile so depth-3+
+   rows don't push the icon + name + balance + chevron off the viewport.
+   Wrapper sets `--depth: <n>` inline. */
+.depth-row {
+  padding-inline-start: calc(1rem + var(--depth, 0) * 0.75rem);
+}
+@media (min-width: 768px) {
+  .depth-row {
+    padding-inline-start: calc(1rem + var(--depth, 0) * 1.25rem);
+  }
+}
+
+/* HTMX swap fade so partials don't pop. Both phases use ease-snap;
+   `ease-in` on settling would delay the moment the user is watching most. */
+.htmx-swapping  { opacity: 0; transition: opacity 120ms var(--ease-snap); }
+.htmx-settling  { opacity: 1; transition: opacity 150ms var(--ease-snap); }
 
 /* Per-balance eye toggle: amount visible by default (no JS needed).
    Alpine only adds .balance-hidden when toggled off. */
@@ -108,3 +138,31 @@
 .balance.balance-hidden .balance-eye-show { display: none; }
 .balance.balance-hidden .balance-masked { display: inline; }
 .balance.balance-hidden .balance-eye-hide { display: inline-block; }
+
+/* Chart curtain: same pattern, applied to the Reports → Pocket balances chart.
+   Wrapper is `chart-mask chart-hidden` statically; Alpine removes `chart-hidden`
+   when localStorage says the user has revealed this chart before. The overlay
+   sits on top of the rendered chart so ApexCharts can still measure its width. */
+.chart-mask .chart-overlay {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms var(--ease-snap);
+}
+.chart-mask.chart-hidden .chart-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+.chart-mask .chart-eye-hide { display: none; }
+.chart-mask.chart-hidden .chart-eye-show { display: none; }
+.chart-mask.chart-hidden .chart-eye-hide { display: inline-block; }
+
+/* Reduced motion: keep opacity/colour cues, kill movement.
+   Per Emil — reduce, don't remove. Comprehension stays intact. */
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-ghost:active,
+  .balance button:active { transform: none; }
+  .animate-sheet-up,
+  .animate-slide-up { animation: var(--animate-fade-in); }
+}

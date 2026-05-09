@@ -41,11 +41,16 @@ def dashboard(request):
         Decimal("0"),
     )
 
-    month_start, next_month = _month_range()
+    today = date.today()
+    month_start, next_month = _month_range(today)
+    # Aggregates and the latest-transactions feed only count what has *already
+    # happened* — scheduled future rows live in the projection dashboard, not
+    # this surface. Reports keeps period-bounded semantics (period.end caps).
     txn_qs = Transaction.objects.filter(
         pocket_id__in=visible_ids,
         occurred_on__gte=month_start,
         occurred_on__lt=next_month,
+        occurred_on__lte=today,
     )
     sums = txn_qs.values("kind").annotate(total=Sum("amount"))
     by_kind = {row["kind"]: row["total"] for row in sums}
@@ -53,7 +58,10 @@ def dashboard(request):
     expense_total = by_kind.get("expense", 0) or 0
 
     latest = list(
-        Transaction.objects.filter(pocket_id__in=visible_ids)
+        Transaction.objects.filter(
+            pocket_id__in=visible_ids,
+            occurred_on__lte=today,
+        )
         .select_related("pocket", "category")
         .order_by("-occurred_on", "-created_at")[:6]
     )

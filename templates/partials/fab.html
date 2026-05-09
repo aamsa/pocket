@@ -4,7 +4,7 @@
     @click="open = true"
     class="fixed left-1/2 -translate-x-1/2 z-40 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)]
            w-14 h-14 rounded-full bg-brand-700 text-brand-50 shadow-pop grid place-items-center
-           ring-4 ring-brand-50 active:scale-95 transition"
+           ring-4 ring-brand-50 active:scale-95 transition-transform duration-150 ease-snap"
     aria-label="Quick add"
   >
     <i data-lucide="plus" class="w-7 h-7 stroke-[2]"></i>
@@ -12,27 +12,27 @@
 
   <template x-teleport="body">
     <div x-show="open" x-cloak class="fixed inset-0 z-50">
-      <div x-show="open" x-transition.opacity
+      <div x-show="open" x-transition.opacity.duration.280ms
            class="absolute inset-0 bg-brand-900/40" @click="open = false"></div>
-      <div x-show="open" x-transition.duration.220ms
+      <div x-show="open" x-transition.duration.280ms
            class="absolute inset-x-0 bottom-0 bg-brand-50 rounded-t-3xl px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)]
                   shadow-pop animate-sheet-up">
         <div class="mx-auto h-1 w-10 rounded-full bg-brand-200 mb-4"></div>
         <div class="flex flex-col gap-2">
           <a href="{% url 'transactions:new' %}?kind=income" class="btn-secondary justify-start">
             <i data-lucide="trending-up" class="icon text-income"></i>
-            <span>Add Income</span>
-            <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
+            <span>Add income</span>
+            <i data-lucide="chevron-right" class="icon ml-auto text-brand-500"></i>
           </a>
           <a href="{% url 'transactions:new' %}?kind=expense" class="btn-secondary justify-start">
             <i data-lucide="trending-down" class="icon text-expense"></i>
-            <span>Add Expense</span>
-            <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
+            <span>Add expense</span>
+            <i data-lucide="chevron-right" class="icon ml-auto text-brand-500"></i>
           </a>
           <a href="{% url 'transfers:new' %}" class="btn-secondary justify-start">
             <i data-lucide="arrow-left-right" class="icon"></i>
             <span>Transfer</span>
-            <i data-lucide="chevron-right" class="icon ml-auto text-brand-400"></i>
+            <i data-lucide="chevron-right" class="icon ml-auto text-brand-500"></i>
           </a>
           <button class="btn-ghost mt-1" @click="open = false">Cancel</button>
         </div>

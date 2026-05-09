@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -7,8 +9,15 @@ from django.views.decorators.http import require_http_methods
 
 from apps.pockets.permissions import can_manage, can_view
 
-from .forms import CategoryForm, TransactionFilterForm, TransactionForm, TransferForm
-from .models import Category, Transaction, Transfer
+from .forms import (
+    CategoryForm,
+    RecurringRuleForm,
+    TransactionFilterForm,
+    TransactionForm,
+    TransferForm,
+)
+from .models import Category, RecurringRule, Transaction, Transfer
+from .recurring import clear_future, materialize
 
 
 PAGE_SIZE = 25
@@ -45,6 +54,10 @@ def index(request):
     if cleaned.get("end"):
         txn_qs = txn_qs.filter(occurred_on__lte=cleaned["end"])
         transfer_qs = transfer_qs.filter(occurred_on__lte=cleaned["end"])
+    if not cleaned.get("show_planned"):
+        today = date.today()
+        txn_qs = txn_qs.filter(occurred_on__lte=today)
+        transfer_qs = transfer_qs.filter(occurred_on__lte=today)
     if cleaned.get("pocket"):
         p = cleaned["pocket"]
         txn_qs = txn_qs.filter(pocket=p)
@@ -188,6 +201,88 @@ def transfer_delete(request, transfer_id):
 
 
 # --- Categories -------------------------------------------------------------
+
+
+# --- Recurring rules --------------------------------------------------------
+
+
+@login_required
+def recurring_index(request):
+    rules = (
+        RecurringRule.objects.filter(created_by=request.user)
+        .select_related("pocket", "category")
+        .order_by("-is_active", "-created_at")
+    )
+    return render(request, "recurring/index.html", {"rules": rules})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def recurring_new(request):
+    if request.method == "POST":
+        form = RecurringRuleForm(request.POST, user=request.user)
+        if form.is_valid():
+            _ensure_can_manage(request.user, form.cleaned_data["pocket"])
+            rule = form.save()
+            created = materialize(rule)
+            messages.success(
+                request,
+                f"Schedule saved. {created} occurrence{'s' if created != 1 else ''} planned.",
+            )
+            return redirect("transactions:recurring_index")
+    else:
+        form = RecurringRuleForm(user=request.user)
+    return render(request, "recurring/form.html", {"form": form, "mode": "new"})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def recurring_edit(request, rule_id):
+    rule = get_object_or_404(RecurringRule, pk=rule_id, created_by=request.user)
+    if request.method == "POST":
+        form = RecurringRuleForm(request.POST, instance=rule, user=request.user)
+        if form.is_valid():
+            _ensure_can_manage(request.user, form.cleaned_data["pocket"])
+            rule = form.save()
+            clear_future(rule)
+            created = materialize(rule)
+            messages.success(
+                request,
+                f"Schedule updated. {created} future occurrence{'s' if created != 1 else ''} re-planned.",
+            )
+            return redirect("transactions:recurring_index")
+    else:
+        form = RecurringRuleForm(instance=rule, user=request.user)
+    return render(
+        request, "recurring/form.html", {"form": form, "mode": "edit", "rule": rule}
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def recurring_delete(request, rule_id):
+    rule = get_object_or_404(RecurringRule, pk=rule_id, created_by=request.user)
+    clear_future(rule)
+    rule.delete()
+    messages.success(request, "Schedule deleted.")
+    return redirect("transactions:recurring_index")
+
+
+@login_required
+@require_http_methods(["POST"])
+def recurring_toggle(request, rule_id):
+    rule = get_object_or_404(RecurringRule, pk=rule_id, created_by=request.user)
+    if rule.is_active:
+        rule.is_active = False
+        rule.save(update_fields=["is_active", "updated_at"])
+        clear_future(rule)
+        messages.success(request, "Schedule paused.")
+    else:
+        rule.is_active = True
+        rule.save(update_fields=["is_active", "updated_at"])
+        materialize(rule)
+        messages.success(request, "Schedule resumed.")
+    return redirect("transactions:recurring_index")
 
 
 @login_required

@@ -11,7 +11,7 @@
         <i data-lucide="arrow-left" class="icon"></i> Back to {{ pocket.name }}
       </a>
       <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900 mt-2">Share pocket</h1>
-      <p class="text-sm text-brand-500 mt-1">Sharing this pocket also shares its sub-pockets at the same level.</p>
+      <p class="text-sm text-brand-600 mt-1">Sharing this pocket also shares its sub-pockets at the same level.</p>
     </div>
 
     <form method="post" class="card p-5 md:p-6 flex flex-col gap-4 mb-5">
@@ -24,7 +24,7 @@
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">Permission</span>
         {{ form.permission }}
-        <span class="text-xs text-brand-500">View = read only · Manage = read + add/edit/delete</span>
+        <span class="text-xs text-brand-600">View = read only · Manage = read + add/edit/delete</span>
       </label>
       <button type="submit" class="btn-primary mt-2 h-12">
         <i data-lucide="send" class="icon"></i> Send invite
@@ -42,7 +42,7 @@
               </span>
               <div class="flex-1 min-w-0">
                 <div class="text-sm font-medium text-brand-900 truncate">{{ s.shared_with.profile.label }}</div>
-                <div class="text-xs text-brand-500">@{{ s.shared_with.username }} · {{ s.get_permission_display }} · {{ s.get_status_display }}</div>
+                <div class="text-xs text-brand-600">@{{ s.shared_with.username }} · {{ s.get_permission_display }} · {{ s.get_status_display }}</div>
               </div>
               <form method="post" action="{% url 'pockets:share_revoke' s.id %}">{% csrf_token %}
                 <button type="submit"
@@ -56,7 +56,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="text-sm text-brand-500">Not shared with anyone yet.</p>
+        <p class="text-sm text-brand-600">Not shared with anyone yet.</p>
       {% endif %}
     </div>
   </div>

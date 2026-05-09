@@ -24,7 +24,7 @@ Params:
 ><span class="balance-visible num {{ text_class|default:'font-semibold text-brand-900' }}">{{ amount|rupiah }}</span
 ><span class="balance-masked num {{ text_class|default:'font-semibold text-brand-900' }} tracking-widest select-none">Rp ••••</span
 ><button type="button" @click.stop.prevent="toggle()"
-        class="self-center text-brand-300 hover:text-brand-700 transition shrink-0 p-1 -m-1 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-300/40"
+        class="self-center text-brand-500 hover:text-brand-700 active:scale-90 shrink-0 p-2 -m-2 rounded-full transition-[color,transform] duration-150 ease-snap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40"
         :aria-label="visible ? 'Hide amount' : 'Show amount'"
         tabindex="0">
   <i data-lucide="eye"     class="balance-eye-show w-4 h-4"></i>

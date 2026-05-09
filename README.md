@@ -15,6 +15,8 @@ Built with Django 5 + HTMX + Alpine.js + Tailwind v4 + ApexCharts. Single-develo
 - **Income, expense, and transfer.** All three are first-class. Categories ship with sensible defaults (Salary, Food, Transport, …) and users can add their own.
 - **Pocket sharing.** Invite another user to a pocket with `view` or `manage` permission. Sharing a parent implicitly shares descendants. Recipients accept or decline from an inbox.
 - **Period-filtered reports.** Week / This month / Last 3 months / This year / Custom range. Filter by pocket (with optional include-subtree). Four panels: income vs expense, spending by category donut, pocket balances area chart, top transactions.
+- **Scheduled income / expense.** Pick a frequency (daily / weekly / monthly / yearly), an "every N" interval, a start date, and either an end date or an occurrence count. Editing the rule re-plans the future; past actuals are never disturbed. Past entries can be paused without deleting.
+- **Projection dashboard.** Forward-looking view at `/projections/`: balance trajectory per pocket, projected monthly income vs expense, and the active schedules driving the forecast. Horizon picker (3 / 6 / 12 months).
 - **Mobile-first UI.** Bottom tab bar + center FAB on mobile, sidebar on desktop. IDR formatting (`Rp 1.250.000`) everywhere. Warm cream/brown brand palette taken from `docs/colors.png`.
 - **Per-balance hide/reveal, hidden by default.** Every *balance* figure (the Dashboard's Total Balance card, every pocket row balance on the Pockets list, both balance cards on Pocket detail) renders as `Rp ••••` until you tap its eye icon to reveal. Choice persists in `localStorage` per device, per balance — navigating between pages or reloading keeps revealed balances revealed. Income and expense aggregates, transaction rows, and report charts are intentionally untouched.
 
@@ -41,8 +43,9 @@ pocket/
 ├── apps/
 │   ├── accounts/                    auth, UserProfile, mgmt commands, middleware
 │   ├── pockets/                     Pocket tree, PocketShare, permissions, balance services
-│   ├── transactions/                Category, Transaction, Transfer + filters
-│   ├── reports/                     period filter + ApexCharts data builders
+│   ├── transactions/                Category, Transaction, Transfer, RecurringRule + materialiser
+│   ├── reports/                     period filter + ApexCharts data builders (the past)
+│   ├── projections/                 forward-looking dashboard (the future)
 │   └── core/                        dashboard, money template tags, context processors
 ├── templates/                       project-level templates (base + partials + pages)
 ├── static/
@@ -131,7 +134,6 @@ A quick smoke test, with two users (`admin` and `wife`) and the BCA pocket share
 These are explicitly deferred:
 
 - **Production deployment** to the existing DigitalOcean droplet. `config/settings/prod.py` has the Postgres skeleton; Gunicorn/Nginx/systemd are a follow-up plan.
-- **Recurring transactions** (monthly salary auto-post, etc.).
 - **Restore-from-archive UI** for pockets (model supports it; no view yet).
 - **CSV import/export.**
 - **Multi-currency.** Out of scope by design.

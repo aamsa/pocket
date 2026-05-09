@@ -2,7 +2,7 @@
 {% block title %}Sign in · {{ APP_NAME }}{% endblock %}
 
 {% block public %}
-  <div class="w-full max-w-sm">
+  <div class="w-full max-w-sm animate-slide-up">
     <div class="text-center mb-8">
       <div class="mx-auto w-14 h-14 rounded-2xl bg-brand-700 text-brand-50 grid place-items-center shadow-pop mb-4">
         <i data-lucide="wallet" class="w-7 h-7 stroke-[1.75]"></i>
@@ -13,7 +13,7 @@
 
     <div class="card p-6">
       <h2 class="text-base font-semibold text-brand-900 mb-1">Sign in</h2>
-      <p class="text-sm text-brand-500 mb-5">Use the credentials you were given.</p>
+      <p class="text-sm text-brand-600 mb-5">Use the credentials you were given.</p>
 
       <form method="post" novalidate class="flex flex-col gap-4">
         {% csrf_token %}
@@ -37,7 +37,7 @@
       </form>
     </div>
 
-    <p class="text-center text-xs text-brand-500 mt-6">
+    <p class="text-center text-xs text-brand-600 mt-6">
       Accounts are created by the superuser. Forgot your password? Ask the admin to reset it.
     </p>
   </div>

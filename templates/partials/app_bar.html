@@ -13,21 +13,27 @@
           {{ user.profile.label|slice:":1"|upper }}
         </span>
       </button>
-      <div x-show="open" x-cloak x-transition.opacity
-           class="absolute right-4 top-14 md:top-16 w-56 card p-2 z-40">
+      <div x-show="open" x-cloak
+           x-transition:enter="transition ease-snap duration-150"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-snap duration-100"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95"
+           class="origin-top-right absolute right-4 top-14 md:top-16 w-56 card p-2 z-40">
         <div class="px-3 py-2">
           <div class="text-sm font-semibold text-brand-900 truncate">{{ user.profile.label }}</div>
-          <div class="text-xs text-brand-500 truncate">@{{ user.username }}</div>
+          <div class="text-xs text-brand-600 truncate">@{{ user.username }}</div>
         </div>
         <div class="h-px bg-brand-100 my-1"></div>
-        <a href="{% url 'accounts:profile' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-100/70 text-sm">
+        <a href="{% url 'accounts:profile' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-100/70 active:bg-brand-200/80 text-sm">
           <i data-lucide="user" class="icon"></i> Profile
         </a>
-        <a href="{% url 'accounts:change_password' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-100/70 text-sm">
+        <a href="{% url 'accounts:change_password' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-100/70 active:bg-brand-200/80 text-sm">
           <i data-lucide="key-round" class="icon"></i> Change password
         </a>
         <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}
-          <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-100/70 text-sm text-brand-900">
+          <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-brand-100/70 active:bg-brand-200/80 text-sm text-brand-900">
             <i data-lucide="log-out" class="icon"></i> Sign out
           </button>
         </form>

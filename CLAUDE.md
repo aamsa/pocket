@@ -33,8 +33,9 @@ The project's recommended skills are pinned in `skills-lock.json` (committed). T
 config/settings/{base,dev,prod}.py     dev defaults to settings.dev via manage.py
 apps/accounts/                         auth, UserProfile, force-password-change, mgmt commands
 apps/pockets/                          Pocket tree, PocketShare, permissions
-apps/transactions/                     Category, Transaction, Transfer (yes — Transfer model lives here)
-apps/reports/                          period filter + ApexCharts data builders
+apps/transactions/                     Category, Transaction, Transfer, RecurringRule + materialiser (recurring.py)
+apps/reports/                          period filter + ApexCharts data builders (the past)
+apps/projections/                      forward-looking dashboard built on materialised future Transactions
 apps/core/                             dashboard, money template tags (rupiah, balance_key), context processors
 templates/                             project-level (base.html + partials/, page templates)
 templates/partials/balance.html        amount + per-balance eye toggle (used everywhere a pocket balance is shown)
@@ -83,14 +84,29 @@ python manage.py setpassword <username>
 - **One Main pocket per user**, enforced by a partial unique index. The post-User-creation signal in `apps.pockets.signals` bootstraps it.
 - **Forms get a `user=` kwarg** so they can scope querysets and stamp `created_by`. Don't read `request.user` inside a form.
 - **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function.
+- **Recurring rules pre-materialise.** `RecurringRule` (`apps/transactions/models.py`) is the user-facing schedule entity, but the math everywhere else stays simple: when a rule is saved, `apps/transactions/recurring.py::materialize` creates one `Transaction` row per occurrence (`Transaction.recurring_rule` FK, `SET_NULL` on rule delete). On rule edit: `clear_future(rule)` then `materialize(rule, from_date=date.today())`. Past actuals are never disturbed. Pause = clear future + flip `is_active`. There's no virtual-future math anywhere — every projection chart just queries `Transaction` rows in the future window.
+- **Past-only by default on history surfaces.** Once the recurring feature lands, future-dated `Transaction` rows exist in the DB. Anything that reads as "what has happened" — the Dashboard's *Total balance card is unaffected* (uses live balance), the Dashboard's monthly income/expense aggregates and Latest transactions, and the Transactions list — must apply `occurred_on__lte=date.today()`. The Transactions filter form has a `show_planned` checkbox that opts back into seeing future entries (rendered with italics + a "Planned" chip via `templates/transactions/_list.html`). Reports keep period-bounded semantics (`period.end` caps) — a "this month" query that runs on May 9 will still include scheduled rows for May 25, on purpose.
 - **ApexCharts**: build the full options dict server-side (in `apps/reports/services.py`), pass through `json_script`, hydrate in `static/js/app.js` on `htmx:afterSwap` so charts re-render cleanly through swaps. Add `_format: "rupiah"` to apply the IDR axis/tooltip formatter.
 - **Dynamic Tailwind classes** like `bg-{{ pocket.color_token }}` need to appear in the `@source inline(...)` safelist in `input.css` since the scanner can't see them.
 - **Balance figures** — strictly *balance* totals — should be rendered through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace.
   - **Default is HIDDEN.** The wrapper renders with `balance-hidden` statically; Alpine removes it only when localStorage records `'1'` for the key. So the user always sees `Rp ••••` first and reveals deliberately.
   - Build the key with `{% balance_key "pocket" pocket.id "downstream" as bkey %}` (from `apps.core.templatetags.money`) — Django's stock `add` filter can't concat `str + UUID`, so don't try `"pocket:"|add:p.id`.
   - Re-using the same key on multiple pages (e.g. `pocket:<uuid>:downstream` on both pockets-index and pocket-detail) is intentional — the user expects revealing a pocket on one page to also reveal it on the other.
-  - **Scope is balances only.** Use the partial for: the Dashboard *Total Balance* card, every pocket-row balance on the Pockets list, the two balance cards on the Pocket detail page. **Do NOT use it for** the Dashboard income/expense aggregates, transaction-row amounts, transfer rows, transactions filter list, reports charts/lists, transaction form input. The user explicitly excluded these — don't add eyes there without asking first.
+  - **Scope is standing balances only.** Use the partial for: the Dashboard *Total Balance* card, every pocket-row balance on the Pockets list, the two balance cards on the Pocket detail page. The **Reports → Pocket balances chart** and the **Projections → Balance trajectory chart** also have curtains — both use the `.chart-mask` wrapper (see `templates/reports/_panels.html` and `templates/projections/_panels.html`), not the partial. The partial wraps a number; the chart curtain wraps a chart with an overlay so ApexCharts can still measure its width. Both share the localStorage namespace `pocket-balance-vis:` (specific keys: `pocket-balance-vis:reports:pocket-balances`, `pocket-balance-vis:projections:balance-trajectory`). **Do NOT add either curtain to** the Dashboard income/expense aggregates, transaction-row amounts, transfer rows, transactions filter list, the Income vs Expense / Spending by category / Top transactions panels on Reports, the Projected income vs expense or Active schedules panels on Projections, transaction form input. The user explicitly excluded these — don't add eyes there without asking first.
   - Alpine state is **inlined in the partial**, not registered via `Alpine.data()`. This was deliberate after a stale-cache incident on iOS Safari left the click handler dead. Keep it inline.
+
+## Motion conventions
+
+UI motion follows Emil Kowalski's design-engineering rules. The `emil-design-eng` skill captures the full ruleset; the project-specific bits are:
+
+- **Easing tokens.** `--ease-snap` (`cubic-bezier(0.23, 1, 0.32, 1)`) is the UI default; `--ease-glide` (`cubic-bezier(0.77, 0, 0.175, 1)`) is for on-screen movement; the FAB sheet uses the iOS-drawer curve `cubic-bezier(0.32, 0.72, 0, 1)`. Both `--ease-*` tokens are exposed as Tailwind utilities (`ease-snap`, `ease-glide`). Don't introduce one-off curves — extend the token set instead.
+- **Never use `ease-in` for UI.** It delays the moment the user is watching most. The `.htmx-settling` class is the canonical example of the trap.
+- **Buttons declare exact properties.** `.btn-primary/.btn-secondary/.btn-ghost/.input` use explicit `transition: transform … , background-color … , …` — never the bare `transition` shorthand (which animates `all` via Tailwind's class).
+- **`focus-visible:` over `focus:` for buttons.** Mouse/touch press shouldn't leave a ring; keyboard focus should. `.input` keeps `focus:` because form fields legitimately need a focus ring on click.
+- **Press feedback is mandatory on tappable rows and nav.** `active:scale-[.96..99]` for hot-path nav (sidebar/bottom-tabs); buttons already have `active:scale-[.98]`. No colour transition on hot-path nav (frequent action — Emil's frequency rule).
+- **Origin-aware popovers.** Anchored popovers (account dropdown) need `origin-top-right` (or matching origin) so the scale animation comes out of the trigger. Modals stay centered — they're not anchored.
+- **`prefers-reduced-motion` block at end of `input.css`** disables transforms on `:active` and degrades movement-based entrances to opacity-only fades. Reduce, don't remove — keep opacity/colour cues.
+- **ApexCharts: initial render animates, swaps don't.** The `_ANIMATIONS` constant in `apps/reports/services.py` sets `dynamicAnimation.enabled: false` so period-filter swaps stay crisp. Reuse it for any new chart.
 
 ## Test users (dev DB)
 
@@ -108,7 +124,6 @@ python manage.py createuser wife --display-name "Wife"
 ## Deferred (not yet shipped)
 
 - **Production deployment.** `config/settings/prod.py` is a placeholder (Postgres connection only). No Gunicorn/Nginx/systemd config yet.
-- **Recurring transactions** (e.g., monthly salary auto-post).
 - **Soft-delete restore UI** for archived pockets (the model supports it; no view yet).
 - **CSV import/export.**
 - **Multi-currency** (explicitly out of scope for this MVP).

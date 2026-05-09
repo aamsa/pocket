@@ -5,12 +5,15 @@
 {% block content %}
   {% include "partials/messages.html" %}
 
-  <div class="flex items-end justify-between mb-5">
-    <div>
+  <div class="flex items-end justify-between gap-3 mb-5">
+    <div class="min-w-0 flex-1">
       <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Transactions</h1>
-      <p class="text-sm text-brand-500 mt-1">Filter, review, edit. The full ledger.</p>
+      <p class="text-sm text-brand-600 mt-1">Filter, review, edit. The full ledger.</p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 shrink-0">
+      <a href="{% url 'transactions:recurring_index' %}" class="btn-ghost hidden md:inline-flex">
+        <i data-lucide="repeat" class="icon"></i> Scheduled
+      </a>
       <a href="{% url 'transactions:categories' %}" class="btn-ghost hidden md:inline-flex">
         <i data-lucide="tag" class="icon"></i> Categories
       </a>
@@ -27,27 +30,31 @@
         hx-trigger="change from:select, change from:input[type=date]"
         hx-push-url="true">
     <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <label class="flex flex-col gap-1.5">
+      <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">From</span>
         {{ form.start }}
       </label>
-      <label class="flex flex-col gap-1.5">
+      <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">To</span>
         {{ form.end }}
       </label>
-      <label class="flex flex-col gap-1.5">
+      <label class="flex flex-col gap-1.5 min-w-0 col-span-2 md:col-span-1">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Kind</span>
         {{ form.kind }}
       </label>
-      <label class="flex flex-col gap-1.5">
+      <label class="flex flex-col gap-1.5 min-w-0 col-span-2 md:col-span-1">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Pocket</span>
         {{ form.pocket }}
       </label>
-      <label class="flex flex-col gap-1.5">
+      <label class="flex flex-col gap-1.5 min-w-0 col-span-2 md:col-span-1">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Category</span>
         {{ form.category }}
       </label>
     </div>
+    <label class="inline-flex items-center gap-2 mt-3 cursor-pointer text-sm text-brand-700">
+      {{ form.show_planned }}
+      <span>Show planned (scheduled future entries)</span>
+    </label>
   </form>
 
   <div id="txn-list">

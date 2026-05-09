@@ -7,12 +7,12 @@
 {% block content %}
   {% include "partials/messages.html" %}
 
-  <div class="flex items-end justify-between mb-5">
-    <div>
+  <div class="flex items-end justify-between gap-3 mb-5">
+    <div class="min-w-0 flex-1">
       <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Pockets</h1>
-      <p class="text-sm text-brand-500 mt-1">Where your money lives — group accounts however you like.</p>
+      <p class="text-sm text-brand-600 mt-1">Where your money lives. Group accounts however you like.</p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 shrink-0">
       {% if pending_invite_count %}
         <a href="{% url 'pockets:shares_inbox' %}" class="btn-ghost relative">
           <i data-lucide="inbox" class="icon"></i>
@@ -33,36 +33,36 @@
         {% with p=row.pocket %}
           <li>
             <a href="{% url 'pockets:detail' p.id %}"
-               class="flex items-center gap-3 px-4 py-3 hover:bg-brand-50/60 transition"
-               style="padding-left: calc(1rem + {{ row.depth }} * 1.25rem)">
+               class="depth-row flex items-center gap-3 pr-4 py-3 hover:bg-brand-50/60 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap"
+               style="--depth: {{ row.depth }}">
               <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0
                            bg-{{ p.color_token }}">
                 <i data-lucide="{{ p.icon }}" class="icon"></i>
               </span>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="font-medium text-brand-900 truncate">{{ p.name }}</span>
-                  {% if p.is_main %}<span class="chip">Main</span>{% endif %}
-                </div>
-                {% if p.notes %}
-                  <div class="text-xs text-brand-500 truncate">{{ p.notes }}</div>
+                <div class="font-medium text-brand-900 truncate">{{ p.name }}</div>
+                {% if p.is_main or p.notes %}
+                  <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
+                    {% if p.is_main %}<span class="chip shrink-0">Main</span>{% endif %}
+                    {% if p.notes %}<span class="truncate">{{ p.notes }}</span>{% endif %}
+                  </div>
                 {% endif %}
               </div>
               {% balance_key "pocket" p.id "downstream" as bkey %}
               <div class="text-right shrink-0">
                 {% include "partials/balance.html" with amount=row.balance key=bkey text_class="font-semibold text-brand-900" %}
-                <div class="text-[11px] text-brand-500 uppercase tracking-wider">downstream</div>
+                <div class="text-[11px] text-brand-600 uppercase tracking-wider">downstream</div>
               </div>
-              <i data-lucide="chevron-right" class="icon text-brand-400 shrink-0"></i>
+              <i data-lucide="chevron-right" class="icon text-brand-500 shrink-0"></i>
             </a>
           </li>
         {% endwith %}
       {% endfor %}
     </ul>
   {% else %}
-    <div class="card p-10 text-center text-sm text-brand-500">
+    <div class="card p-10 text-center text-sm text-brand-600">
       <i data-lucide="wallet" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-      <p>No pockets yet — your Main pocket should appear here on first login.</p>
+      <p>No pockets yet. Your Main pocket should appear here on first login.</p>
     </div>
   {% endif %}
 
@@ -70,28 +70,28 @@
     <h2 class="text-sm font-semibold text-brand-700 uppercase tracking-wide mt-8 mb-3">Shared with you</h2>
     {% for group in shared_groups %}
       <div class="mb-4">
-        <div class="text-xs text-brand-500 mb-2">From {{ group.owner.profile.label }}</div>
+        <div class="text-xs text-brand-600 mb-2">From {{ group.owner.profile.label }}</div>
         <ul class="card divide-y divide-brand-100 overflow-hidden">
           {% for row in group.rows %}
             {% with p=row.pocket %}
               <li>
                 <a href="{% url 'pockets:detail' p.id %}"
-                   class="flex items-center gap-3 px-4 py-3 hover:bg-brand-50/60 transition"
-                   style="padding-left: calc(1rem + {{ row.depth }} * 1.25rem)">
+                   class="depth-row flex items-center gap-3 pr-4 py-3 hover:bg-brand-50/60 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap"
+                   style="--depth: {{ row.depth }}">
                   <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ p.color_token }}">
                     <i data-lucide="{{ p.icon }}" class="icon"></i>
                   </span>
                   <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="font-medium text-brand-900 truncate">{{ p.name }}</span>
-                      <span class="chip">{% if row.permission == 'manage' %}Manage{% else %}View{% endif %}</span>
+                    <div class="font-medium text-brand-900 truncate">{{ p.name }}</div>
+                    <div class="mt-0.5">
+                      <span class="chip shrink-0">{% if row.permission == 'manage' %}Manage{% else %}View{% endif %}</span>
                     </div>
                   </div>
                   {% balance_key "pocket" p.id "downstream" as bkey %}
                   <div class="text-right shrink-0">
                     {% include "partials/balance.html" with amount=row.balance key=bkey text_class="font-semibold text-brand-900" %}
                   </div>
-                  <i data-lucide="chevron-right" class="icon text-brand-400 shrink-0"></i>
+                  <i data-lucide="chevron-right" class="icon text-brand-500 shrink-0"></i>
                 </a>
               </li>
             {% endwith %}

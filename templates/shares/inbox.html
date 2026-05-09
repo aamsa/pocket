@@ -7,7 +7,7 @@
 
   <div class="mb-5">
     <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Invites</h1>
-    <p class="text-sm text-brand-500 mt-1">Pockets others have shared with you.</p>
+    <p class="text-sm text-brand-600 mt-1">Pockets others have shared with you.</p>
   </div>
 
   <section class="card p-5 mb-5">
@@ -21,7 +21,7 @@
             </span>
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium text-brand-900 truncate">{{ s.pocket.name }}</div>
-              <div class="text-xs text-brand-500">
+              <div class="text-xs text-brand-600 truncate">
                 from {{ s.invited_by.profile.label }} · {{ s.get_permission_display }}
               </div>
             </div>
@@ -41,7 +41,7 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p class="text-sm text-brand-500">No pending invites.</p>
+      <p class="text-sm text-brand-600">No pending invites.</p>
     {% endif %}
   </section>
 
@@ -56,7 +56,7 @@
             </span>
             <div class="flex-1 min-w-0">
               <div class="text-sm text-brand-900 truncate">{{ s.pocket.name }}</div>
-              <div class="text-xs text-brand-500">{{ s.get_status_display }} · {{ s.responded_at|date:"d M Y" }}</div>
+              <div class="text-xs text-brand-600 truncate">{{ s.get_status_display }} · {{ s.responded_at|date:"d M Y" }}</div>
             </div>
             {% if s.status == 'accepted' %}
               <a href="{% url 'pockets:detail' s.pocket.id %}" class="text-xs text-brand-700 hover:text-brand-900">Open</a>

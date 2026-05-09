@@ -6,11 +6,9 @@
 {% block content %}
   {% include "partials/messages.html" %}
 
-  <div class="flex items-end justify-between mb-5">
-    <div>
-      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Reports</h1>
-      <p class="text-sm text-brand-500 mt-1">{{ period.label }} · {{ period.start|date:"d M Y" }} → {{ period.end|date:"d M Y" }}</p>
-    </div>
+  <div class="mb-5">
+    <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Reports</h1>
+    <p class="text-sm text-brand-600 mt-1 truncate">{{ period.label }} · {{ period.start|date:"d M Y" }} → {{ period.end|date:"d M Y" }}</p>
   </div>
 
   <form method="get" class="card p-4 md:p-5 mb-5"
@@ -18,8 +16,8 @@
         hx-target="#report-panels"
         hx-trigger="change from:select, change from:input, submit"
         hx-push-url="true">
-    <div class="flex flex-wrap items-center gap-3">
-      <label class="flex flex-col gap-1.5 min-w-[10rem]">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+      <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Period</span>
         <select name="period" class="input">
           {% for key, label in period_choices %}
@@ -28,7 +26,7 @@
         </select>
       </label>
 
-      <label class="flex flex-col gap-1.5 min-w-[10rem]">
+      <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Pocket</span>
         <select name="pocket" class="input">
           <option value="">All pockets</option>
@@ -40,22 +38,22 @@
         </select>
       </label>
 
-      <label class="inline-flex items-center gap-2 mt-5 cursor-pointer text-sm text-brand-700">
-        <input type="checkbox" name="include_children" {% if include_children %}checked{% endif %}
-               class="w-4 h-4 rounded border-brand-300 text-brand-700 focus:ring-brand-300/40" />
-        Include sub-pockets
-      </label>
-
       {% if period_key == 'custom' %}
-        <label class="flex flex-col gap-1.5">
+        <label class="flex flex-col gap-1.5 min-w-0">
           <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">From</span>
           <input type="date" name="start" value="{{ custom_start }}" class="input" />
         </label>
-        <label class="flex flex-col gap-1.5">
+        <label class="flex flex-col gap-1.5 min-w-0">
           <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">To</span>
           <input type="date" name="end" value="{{ custom_end }}" class="input" />
         </label>
       {% endif %}
+
+      <label class="inline-flex items-center gap-2 cursor-pointer text-sm text-brand-700 col-span-1 sm:col-span-2 md:col-span-4 md:mt-1">
+        <input type="checkbox" name="include_children" {% if include_children %}checked{% endif %}
+               class="w-4 h-4 rounded border-brand-300 text-brand-700 focus:ring-brand-300/40" />
+        Include sub-pockets
+      </label>
     </div>
   </form>
 

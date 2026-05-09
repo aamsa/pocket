@@ -112,6 +112,15 @@ _INCOME = "#5C8A4E"
 _EXPENSE = "#9C3D2E"
 _BRAND_RAMP = ["#6F4518", "#A47148", "#BC8A5F", "#D4A276", "#E7BC91", "#8B5E34", "#603808", "#583101"]
 
+# Initial render animates; period-swap re-renders don't (they happen often).
+_ANIMATIONS = {
+    "enabled": True,
+    "easing": "easeout",
+    "speed": 250,
+    "animateGradually": {"enabled": False},
+    "dynamicAnimation": {"enabled": False},
+}
+
 
 def income_vs_expense(user, period: Period, pocket_ids: list):
     qs = Transaction.objects.filter(
@@ -136,7 +145,7 @@ def income_vs_expense(user, period: Period, pocket_ids: list):
     return {
         "has_data": has_data,
         "options": {
-            "chart": {"type": "bar", "toolbar": {"show": False}, "fontFamily": _BASE_FONT},
+            "chart": {"type": "bar", "toolbar": {"show": False}, "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
             "plotOptions": {"bar": {"borderRadius": 6, "columnWidth": "60%"}},
             "colors": [_INCOME, _EXPENSE],
             "dataLabels": {"enabled": False},
@@ -172,7 +181,7 @@ def spending_by_category(user, period: Period, pocket_ids: list):
     return {
         "has_data": bool(series),
         "options": {
-            "chart": {"type": "donut", "fontFamily": _BASE_FONT},
+            "chart": {"type": "donut", "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
             "labels": labels,
             "series": series,
             "colors": _BRAND_RAMP,
@@ -254,7 +263,7 @@ def pocket_balances_over_time(user, period: Period, pocket_ids: list):
     return {
         "has_data": bool(series),
         "options": {
-            "chart": {"type": "area", "toolbar": {"show": False}, "fontFamily": _BASE_FONT},
+            "chart": {"type": "area", "toolbar": {"show": False}, "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
             "stroke": {"curve": "smooth", "width": 2},
             "fill": {"type": "gradient", "gradient": {"opacityFrom": 0.45, "opacityTo": 0.08}},
             "dataLabels": {"enabled": False},

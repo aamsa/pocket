@@ -27,3 +27,5 @@ Thumbs.db
 # Skills live in their own repos; re-install locally rather than commit.
 .agents/
 .claude/skills/
+
+docs/initial-development

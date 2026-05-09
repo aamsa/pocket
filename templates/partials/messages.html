@@ -1,7 +1,14 @@
 {% if messages %}
-  <div class="flex flex-col gap-2 mb-4" x-data="{ open: true }" x-show="open">
+  <div class="flex flex-col gap-2 mb-4">
     {% for message in messages %}
       <div role="status"
+           x-data="{ visible: true }" x-show="visible" x-cloak
+           x-transition:enter="transition ease-snap duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-snap duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-2"
            class="flex items-start gap-3 rounded-xl px-4 py-3 text-sm border
                   {% if 'error' in message.tags %}
                     bg-expense/10 border-expense/20 text-expense
@@ -12,7 +19,7 @@
                   {% endif %}">
         <i data-lucide="{% if 'error' in message.tags %}alert-circle{% elif 'success' in message.tags %}check-circle-2{% else %}info{% endif %}" class="icon mt-0.5"></i>
         <div class="flex-1">{{ message }}</div>
-        <button type="button" @click="open = false" class="opacity-60 hover:opacity-100" aria-label="Dismiss">
+        <button type="button" @click="visible = false" class="opacity-60 hover:opacity-100 active:scale-90 transition-transform duration-100 ease-snap" aria-label="Dismiss">
           <i data-lucide="x" class="icon"></i>
         </button>
       </div>

@@ -1,9 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
+
+from apps.transactions.models import Transaction, Transfer
 
 from .forms import PocketForm, ShareInviteForm
 from .models import (
@@ -16,6 +19,8 @@ from .models import (
 )
 from .permissions import can_manage, can_view, require_pocket_permission
 from .services import balance_for, shared_pocket_groups, user_pocket_tree
+
+POCKET_RECENT_LIMIT = 10
 
 
 @login_required
@@ -85,6 +90,28 @@ def detail(request, pocket):
     children = list(pocket.children.all().active())
     own_balance = balance_for(pocket, include_descendants=False)
     downstream_balance = balance_for(pocket, include_descendants=True)
+
+    txn_qs = (
+        Transaction.objects.filter(pocket=pocket)
+        .select_related("pocket", "category", "created_by")
+        .order_by("-occurred_on", "-created_at")
+    )
+    transfer_qs = (
+        Transfer.objects.filter(Q(from_pocket=pocket) | Q(to_pocket=pocket))
+        .select_related("from_pocket", "to_pocket", "created_by")
+        .order_by("-occurred_on", "-created_at")
+    )
+    rows = []
+    for t in txn_qs[: POCKET_RECENT_LIMIT * 2]:
+        rows.append({"type": "txn", "occurred_on": t.occurred_on, "obj": t})
+    for tr in transfer_qs[: POCKET_RECENT_LIMIT * 2]:
+        rows.append({"type": "transfer", "occurred_on": tr.occurred_on, "obj": tr})
+    rows.sort(
+        key=lambda r: (r["occurred_on"], getattr(r["obj"], "created_at", None)),
+        reverse=True,
+    )
+    rows = rows[:POCKET_RECENT_LIMIT]
+
     return render(
         request,
         "pockets/detail.html",
@@ -94,6 +121,7 @@ def detail(request, pocket):
             "own_balance": own_balance,
             "downstream_balance": downstream_balance,
             "ancestors": list(pocket.ancestors())[::-1],  # root first
+            "rows": rows,
         },
     )
 
