@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Profile · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="max-w-md mx-auto">
+    <h1 class="text-2xl font-semibold tracking-tight text-brand-900 mb-5">Profile</h1>
+    <div class="card p-6">
+      <dl class="grid grid-cols-3 gap-3 text-sm">
+        <dt class="text-brand-500">Username</dt>
+        <dd class="col-span-2 text-brand-900 font-medium">@{{ user.username }}</dd>
+        <dt class="text-brand-500">Display name</dt>
+        <dd class="col-span-2 text-brand-900 font-medium">{{ user.profile.label }}</dd>
+        <dt class="text-brand-500">Role</dt>
+        <dd class="col-span-2 text-brand-900 font-medium">
+          {% if user.is_superuser %}Superuser{% else %}Member{% endif %}
+        </dd>
+      </dl>
+      <div class="mt-5 flex flex-col gap-2">
+        <a href="{% url 'accounts:change_password' %}" class="btn-secondary">
+          <i data-lucide="key-round" class="icon"></i> Change password
+        </a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

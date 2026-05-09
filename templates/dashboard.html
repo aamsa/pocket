@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}Dashboard · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="flex items-end justify-between mb-5">
+    <div>
+      <p class="text-sm text-brand-500">Welcome back,</p>
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">
+        {{ user.profile.label }}
+      </h1>
+    </div>
+    <a href="{% url 'reports:index' %}" class="btn-ghost hidden md:inline-flex">
+      <i data-lucide="chart-pie" class="icon"></i> Reports
+    </a>
+  </div>
+
+  <section class="grid gap-3 md:gap-4 md:grid-cols-3 mb-6">
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wider text-brand-500">Total balance</div>
+      <div class="mt-2 text-2xl font-semibold text-brand-900 num">{{ 0|rupiah }}</div>
+      <div class="text-xs text-brand-500 mt-1">Across all your pockets</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wider text-brand-500">This month — income</div>
+      <div class="mt-2 text-2xl font-semibold text-income num">{{ 0|rupiah }}</div>
+      <div class="text-xs text-brand-500 mt-1">Once transactions land</div>
+    </div>
+    <div class="card p-5">
+      <div class="text-xs uppercase tracking-wider text-brand-500">This month — expense</div>
+      <div class="mt-2 text-2xl font-semibold text-expense num">{{ 0|rupiah }}</div>
+      <div class="text-xs text-brand-500 mt-1">Once transactions land</div>
+    </div>
+  </section>
+
+  <section class="card p-5 md:p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-base font-semibold text-brand-900">Latest transactions</h2>
+      <a href="{% url 'transactions:index' %}" class="text-sm text-brand-700 hover:text-brand-900">View all</a>
+    </div>
+    <div class="text-sm text-brand-500 py-10 text-center">
+      <i data-lucide="receipt-text" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+      <p>No transactions yet — add your first income or expense.</p>
+      <p class="text-xs text-brand-400 mt-1">Available once Phase 4 lands.</p>
+    </div>
+  </section>
+{% endblock %}

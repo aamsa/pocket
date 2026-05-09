@@ -1,0 +1,41 @@
+{% with path=request.path %}
+<aside class="hidden md:block sticky top-16 self-start w-56 shrink-0 py-6">
+  <nav class="flex flex-col gap-1">
+    <a href="{% url 'core:dashboard' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
+              {% if path == '/' %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="layout-dashboard" class="icon"></i> Dashboard
+    </a>
+    <a href="{% url 'pockets:index' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
+              {% if '/pockets' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="wallet" class="icon"></i> Pockets
+    </a>
+    <a href="{% url 'transactions:index' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
+              {% if '/transactions' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="arrow-left-right" class="icon"></i> Transactions
+    </a>
+    <a href="{% url 'reports:index' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
+              {% if '/reports' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="chart-pie" class="icon"></i> Reports
+    </a>
+  </nav>
+
+  <div class="mt-6 card p-4">
+    <div class="text-xs uppercase tracking-wider text-brand-500 mb-2">Quick add</div>
+    <div class="flex flex-col gap-2">
+      <button class="btn-secondary justify-start" disabled title="Coming in Phase 4">
+        <i data-lucide="trending-up" class="icon text-income"></i> Add Income
+      </button>
+      <button class="btn-secondary justify-start" disabled title="Coming in Phase 4">
+        <i data-lucide="trending-down" class="icon text-expense"></i> Add Expense
+      </button>
+      <button class="btn-secondary justify-start" disabled title="Coming in Phase 5">
+        <i data-lucide="arrow-left-right" class="icon"></i> Transfer
+      </button>
+    </div>
+  </div>
+</aside>
+{% endwith %}
