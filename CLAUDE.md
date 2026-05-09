@@ -123,7 +123,15 @@ python manage.py createuser wife --display-name "Wife"
 
 ## Deferred (not yet shipped)
 
-- **Production deployment.** `config/settings/prod.py` is a placeholder (Postgres connection only). No Gunicorn/Nginx/systemd config yet.
 - **Soft-delete restore UI** for archived pockets (the model supports it; no view yet).
 - **CSV import/export.**
 - **Multi-currency** (explicitly out of scope for this MVP).
+- **Automated tests.** The README's verification flow is manual; no `pytest` yet.
+
+## Production
+
+The app is live at <https://pocket.ionyx.org> on a DigitalOcean droplet. The production settings module is `config.settings.prod` driven by `/etc/pocket.env` on the droplet. Full operational runbook lives in [`DEPLOY.md`](DEPLOY.md); the broader project handoff (what shipped, what's load-bearing, what's deferred) is in [`HANDOFF.md`](HANDOFF.md). Key operational rules:
+
+- **Don't disturb co-tenant services** on the droplet (`ionyx`, `n8n`, `sablonmechanics-v2`, plus other ionyx subdomain vhosts). Pocket is isolated to its own user (`pocket`), port (`127.0.0.1:8002`), database (`pocket`), env file (`/etc/pocket.env`), systemd unit (`pocket.service`), and Nginx vhost (`pocket.ionyx.org`).
+- **Cloudflare SSL mode is Full** (not Full Strict). The origin uses snakeoil; Full Strict would refuse the handshake.
+- **Past-only-by-default rule** is now also a production correctness guarantee: `balance_for(as_of=None)` defaults to `date.today()` so future-scheduled rows from `RecurringRule` don't inflate Total Balance / monthly aggregates / the latest-transactions list. Reports period-bounded queries are unchanged. The Projections dashboard is the sanctioned forward-looking surface.

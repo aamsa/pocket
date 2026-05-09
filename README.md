@@ -133,10 +133,13 @@ A quick smoke test, with two users (`admin` and `wife`) and the BCA pocket share
 
 These are explicitly deferred:
 
-- **Production deployment** to the existing DigitalOcean droplet. `config/settings/prod.py` has the Postgres skeleton; Gunicorn/Nginx/systemd are a follow-up plan.
 - **Restore-from-archive UI** for pockets (model supports it; no view yet).
 - **CSV import/export.**
 - **Multi-currency.** Out of scope by design.
+
+## Production
+
+Pocket is deployed to <https://pocket.ionyx.org>. Operations runbook: [`DEPLOY.md`](DEPLOY.md). Project handoff (what got built, what's deferred, what's load-bearing): [`HANDOFF.md`](HANDOFF.md).
 
 ## Operating notes
 
