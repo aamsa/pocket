@@ -48,3 +48,22 @@ class BrandedPasswordChangeForm(PasswordChangeForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", input_class)
+
+
+class ProfileForm(forms.Form):
+    display_name = forms.CharField(
+        max_length=80,
+        widget=forms.TextInput(attrs={"class": input_class}),
+        label="Display name",
+    )
+
+    def __init__(self, *args, profile=None, **kwargs):
+        self.profile = profile
+        if profile is not None and "initial" not in kwargs:
+            kwargs["initial"] = {"display_name": profile.display_name}
+        super().__init__(*args, **kwargs)
+
+    def save(self):
+        self.profile.display_name = self.cleaned_data["display_name"].strip()
+        self.profile.save(update_fields=["display_name"])
+        return self.profile

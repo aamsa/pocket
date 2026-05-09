@@ -4,7 +4,9 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from .forms import BrandedPasswordChangeForm, LoginForm
+from django.contrib import messages
+
+from .forms import BrandedPasswordChangeForm, LoginForm, ProfileForm
 
 
 @require_http_methods(["GET", "POST"])
@@ -46,5 +48,11 @@ def change_password_view(request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def profile_view(request):
-    return render(request, "settings/profile.html")
+    form = ProfileForm(request.POST or None, profile=request.user.profile)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Profile updated.")
+        return redirect("accounts:profile")
+    return render(request, "settings/profile.html", {"form": form})

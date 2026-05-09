@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="max-w-md mx-auto card p-10 text-center">
+    <div class="mx-auto w-14 h-14 rounded-2xl bg-brand-100 text-brand-700 grid place-items-center mb-4">
+      <i data-lucide="search-x" class="w-7 h-7 stroke-[1.75]"></i>
+    </div>
+    <h1 class="text-xl font-semibold text-brand-900">Page not found</h1>
+    <p class="text-sm text-brand-600 mt-2">The page you were looking for moved or never existed.</p>
+    <a href="{% url 'core:dashboard' %}" class="btn-primary mt-6">
+      <i data-lucide="arrow-left" class="icon"></i> Back to dashboard
+    </a>
+  </div>
+{% endblock %}
+
+{% block public %}
+  <div class="max-w-md w-full card p-10 text-center">
+    <h1 class="text-xl font-semibold text-brand-900">Page not found</h1>
+    <a href="{% url 'accounts:login' %}" class="btn-primary mt-6">Sign in</a>
+  </div>
+{% endblock %}

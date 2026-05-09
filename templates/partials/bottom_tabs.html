@@ -21,10 +21,13 @@
       <span>Reports</span>
     </a>
     <a href="{% url 'accounts:profile' %}"
-       class="flex flex-col items-center gap-0.5 py-2 text-[11px]
+       class="relative flex flex-col items-center gap-0.5 py-2 text-[11px]
               {% if '/accounts/settings' in path %}text-brand-900{% else %}text-brand-500{% endif %}">
       <i data-lucide="user" class="icon"></i>
       <span>More</span>
+      {% if GLOBAL_PENDING_INVITES %}
+        <span class="absolute top-1 right-[calc(50%-1.25rem)] w-4 h-4 rounded-full bg-brand-700 text-brand-50 text-[10px] font-semibold grid place-items-center" aria-label="{{ GLOBAL_PENDING_INVITES }} pending invites">{{ GLOBAL_PENDING_INVITES }}</span>
+      {% endif %}
     </a>
   </div>
 </nav>
