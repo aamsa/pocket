@@ -38,6 +38,18 @@
         </select>
       </label>
 
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Category</span>
+        <select name="category" class="input">
+          <option value="">All categories</option>
+          {% for c in available_categories %}
+            <option value="{{ c.id }}" {% if category_id == c.id|stringformat:'s' %}selected{% endif %}>
+              {{ c.name }} · {{ c.get_kind_display }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
       {% if period_key == 'custom' %}
         <label class="flex flex-col gap-1.5 min-w-0">
           <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">From</span>

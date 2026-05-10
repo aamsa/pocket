@@ -5,6 +5,7 @@ from django.shortcuts import render
 
 from apps.pockets.models import Pocket
 from apps.pockets.permissions import visible_pocket_ids
+from apps.transactions.models import Category
 
 from .services import (
     PERIOD_CHOICES,
@@ -35,6 +36,7 @@ def index(request):
 
     pocket_id = request.GET.get("pocket") or None
     include_children = request.GET.get("include_children") == "on"
+    category_id = request.GET.get("category") or None
 
     pocket_ids = scope_pocket_ids(request.user, pocket_id, include_children)
 
@@ -43,6 +45,16 @@ def index(request):
         .select_related("owner", "owner__profile")
         .order_by("name")
     )
+    available_categories = (
+        Category.objects.for_user(request.user).active().order_by("kind", "name")
+    )
+    chosen_category = None
+    if category_id:
+        chosen_category = next(
+            (c for c in available_categories if str(c.id) == category_id), None
+        )
+        if chosen_category is None:
+            category_id = None
 
     if pocket_id:
         chosen = next((p for p in visible_pockets if str(p.id) == pocket_id), None)
@@ -55,6 +67,12 @@ def index(request):
     else:
         balance_series_name = "Overall"
 
+    # The donut is moot when a single category is selected — skip it.
+    if category_id:
+        donut = {"has_data": False, "options": {}}
+    else:
+        donut = spending_by_category(request.user, period, pocket_ids)
+
     ctx = {
         "period_key": period_key,
         "period": period,
@@ -63,14 +81,21 @@ def index(request):
         "custom_end": custom_end.isoformat() if custom_end else "",
         "pocket_id": pocket_id,
         "include_children": include_children,
+        "category_id": category_id,
+        "chosen_category": chosen_category,
         "visible_pockets": visible_pockets,
-        "income_vs_expense": income_vs_expense(request.user, period, pocket_ids),
-        "spending_by_category": spending_by_category(request.user, period, pocket_ids),
+        "available_categories": available_categories,
+        "income_vs_expense": income_vs_expense(
+            request.user, period, pocket_ids, category_id=category_id
+        ),
+        "spending_by_category": donut,
         "pocket_balances": pocket_balances_over_time(
             request.user, period, pocket_ids, series_name=balance_series_name
         ),
         "balance_series_name": balance_series_name,
-        "top_transactions": top_transactions(request.user, period, pocket_ids),
+        "top_transactions": top_transactions(
+            request.user, period, pocket_ids, category_id=category_id
+        ),
     }
     template = "reports/_panels.html" if request.headers.get("HX-Request") else "reports/index.html"
     return render(request, template, ctx)

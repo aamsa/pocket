@@ -131,12 +131,14 @@ _ANIMATIONS = {
 }
 
 
-def income_vs_expense(user, period: Period, pocket_ids: list):
+def income_vs_expense(user, period: Period, pocket_ids: list, *, category_id=None):
     qs = Transaction.objects.filter(
         pocket_id__in=pocket_ids,
         occurred_on__gte=period.start,
         occurred_on__lte=period.end,
     )
+    if category_id:
+        qs = qs.filter(category_id=category_id)
     income_buckets = defaultdict(Decimal)
     expense_buckets = defaultdict(Decimal)
     for row in qs.values("kind", "occurred_on").annotate(total=Sum("amount")):
@@ -310,7 +312,7 @@ def _running_balance_at(pocket_id, as_of: date) -> Decimal:
     return Decimal(income) - Decimal(expense) + Decimal(transfer_in) - Decimal(transfer_out)
 
 
-def top_transactions(user, period: Period, pocket_ids: list, *, n=5):
+def top_transactions(user, period: Period, pocket_ids: list, *, n=5, category_id=None):
     qs = (
         Transaction.objects.filter(
             pocket_id__in=pocket_ids,
@@ -319,6 +321,8 @@ def top_transactions(user, period: Period, pocket_ids: list, *, n=5):
         )
         .select_related("pocket", "category")
     )
+    if category_id:
+        qs = qs.filter(category_id=category_id)
     top_in = list(qs.filter(kind="income").order_by("-amount", "-occurred_on")[:n])
     top_out = list(qs.filter(kind="expense").order_by("-amount", "-occurred_on")[:n])
     return {"top_income": top_in, "top_expense": top_out}

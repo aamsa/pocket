@@ -26,7 +26,11 @@
       <div class="h-72 grid place-items-center text-sm text-brand-600">
         <div class="text-center">
           <i data-lucide="chart-pie" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-          <p>No expenses in this period.</p>
+          {% if chosen_category %}
+            <p>Filtered to {{ chosen_category.name }} — clear the filter to see the breakdown.</p>
+          {% else %}
+            <p>No expenses in this period.</p>
+          {% endif %}
         </div>
       </div>
     {% endif %}
