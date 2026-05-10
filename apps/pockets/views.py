@@ -26,7 +26,13 @@ from .models import (
     PocketShare,
 )
 from .permissions import can_manage, can_view, require_pocket_permission
-from .services import balance_for, card_cycle, shared_pocket_groups, user_pocket_tree
+from .services import (
+    active_installment_plans,
+    balance_for,
+    card_cycle,
+    shared_pocket_groups,
+    user_pocket_tree,
+)
 
 POCKET_RECENT_LIMIT = 10
 POCKET_DETAIL_RANGES = (7, 14, 30)
@@ -151,6 +157,7 @@ def detail(request, pocket):
 
     is_credit = pocket.kind == POCKET_KIND_CREDIT
     cycle = card_cycle(pocket) if is_credit else None
+    plans = active_installment_plans(pocket) if is_credit else []
     children = [] if is_credit else list(pocket.children.all().active())
     own_balance = balance_for(pocket, include_descendants=False)
     downstream_balance = (
@@ -185,6 +192,7 @@ def detail(request, pocket):
             "pocket": pocket,
             "is_credit": is_credit,
             "cycle": cycle,
+            "plans": plans,
             "children": children,
             "own_balance": own_balance,
             "downstream_balance": downstream_balance,

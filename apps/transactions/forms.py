@@ -1,9 +1,11 @@
+import uuid
 from datetime import date
 
 from django import forms
 
-from apps.pockets.models import Pocket
+from apps.pockets.models import POCKET_KIND_CREDIT, Pocket
 from apps.pockets.permissions import can_manage
+from apps.pockets.services import _clamp_day_to_month, _shift_month
 
 
 def _manageable_pockets(user):
@@ -29,6 +31,31 @@ input_class = (
 )
 
 
+INSTALLMENT_CHOICES = [
+    (1, "Single payment"),
+    (3, "3 months"),
+    (6, "6 months"),
+    (12, "12 months"),
+    (24, "24 months"),
+]
+
+
+class PocketKindSelect(forms.Select):
+    """Select widget that tags each <option> with data-kind so Alpine
+    can show/hide installment fields depending on the chosen pocket."""
+
+    def __init__(self, *args, kind_lookup=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.kind_lookup = kind_lookup or {}
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        kind = self.kind_lookup.get(str(value))
+        if kind:
+            option["attrs"]["data-kind"] = kind
+        return option
+
+
 class TransactionForm(forms.ModelForm):
     amount = forms.DecimalField(
         max_digits=14,
@@ -38,6 +65,14 @@ class TransactionForm(forms.ModelForm):
             attrs={"class": input_class, "inputmode": "numeric", "placeholder": "0"}
         ),
         label="Amount",
+    )
+    installment_months = forms.TypedChoiceField(
+        coerce=int,
+        choices=INSTALLMENT_CHOICES,
+        initial=1,
+        required=False,
+        widget=forms.Select(attrs={"class": input_class}),
+        label="Installments",
     )
 
     class Meta:
@@ -67,19 +102,82 @@ class TransactionForm(forms.ModelForm):
 
         chosen_kind = self.initial.get("kind") or self.data.get("kind") or kind
         if user is not None:
-            self.fields["pocket"].queryset = _manageable_pockets(user)
+            pocket_qs = _manageable_pockets(user)
+            self.fields["pocket"].queryset = pocket_qs
+            kind_lookup = {str(p.id): p.kind for p in pocket_qs}
+            self.fields["pocket"].widget = PocketKindSelect(
+                attrs={"class": input_class, "x-model": "pocketId"},
+                kind_lookup=kind_lookup,
+            )
+            self.fields["pocket"].widget.choices = self.fields["pocket"].choices
             cat_qs = Category.objects.for_user(user).active()
             if chosen_kind:
                 cat_qs = cat_qs.filter(kind=chosen_kind)
             self.fields["category"].queryset = cat_qs
 
+        # Editing an existing row: hide the installment selector. Each child is
+        # treated as a normal Transaction once materialised. Use _state.adding
+        # (not .pk) because Transaction has a UUID default that populates pk
+        # even on unsaved instances.
+        if self.instance and not self.instance._state.adding:
+            self.fields["installment_months"].widget = forms.HiddenInput()
+            self.fields["installment_months"].initial = 1
+
+    def clean(self):
+        cleaned = super().clean()
+        months = cleaned.get("installment_months") or 1
+        if months and months > 1:
+            pocket = cleaned.get("pocket")
+            kind = cleaned.get("kind") or self.initial.get("kind")
+            if not pocket or pocket.kind != POCKET_KIND_CREDIT:
+                self.add_error("installment_months", "Installments are only for credit-card pockets.")
+            if kind != "expense":
+                self.add_error("installment_months", "Installments only apply to expenses.")
+        return cleaned
+
     def save(self, commit=True):
         obj = super().save(commit=False)
         if obj.created_by_id is None:
             obj.created_by = self.user
-        if commit:
-            obj.save()
-        return obj
+
+        months = int(self.cleaned_data.get("installment_months") or 1)
+        is_edit = self.instance and not self.instance._state.adding
+        if months <= 1 or is_edit:
+            if commit:
+                obj.save()
+            return obj
+
+        # Materialise N children. Per-month amount uses integer division;
+        # the last child eats the remainder so children sum exactly to total.
+        total_amount = int(obj.amount)
+        base_monthly = total_amount // months
+        remainder = total_amount - base_monthly * months
+        group_uuid = uuid.uuid4()
+        purchase_date = obj.occurred_on
+
+        first_child = None
+        for k in range(1, months + 1):
+            year, month = _shift_month(purchase_date, k - 1)
+            occurred = _clamp_day_to_month(year, month, purchase_date.day)
+            amount = base_monthly + (remainder if k == months else 0)
+            child = Transaction(
+                pocket=obj.pocket,
+                kind=obj.kind,
+                amount=amount,
+                category=obj.category,
+                occurred_on=occurred,
+                notes=obj.notes,
+                created_by=obj.created_by,
+                installment_group=group_uuid,
+                installment_index=k,
+                installment_total=months,
+            )
+            if commit:
+                child.save()
+            if first_child is None:
+                first_child = child
+
+        return first_child or obj
 
 
 class CategoryForm(forms.ModelForm):
@@ -176,6 +274,13 @@ class TransactionFilterForm(forms.Form):
         queryset=Category.objects.none(),
         empty_label="All categories",
         widget=forms.Select(attrs={"class": input_class}),
+    )
+    show_planned = forms.BooleanField(
+        required=False,
+        label="Show planned",
+        widget=forms.CheckboxInput(
+            attrs={"class": "w-4 h-4 rounded border-brand-300 text-brand-700 focus:ring-brand-300/40"}
+        ),
     )
 
     def __init__(self, *args, user=None, **kwargs):

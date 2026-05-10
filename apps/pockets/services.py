@@ -122,7 +122,8 @@ def models_sum(field):
 
 @dataclass
 class CardCycle:
-    outstanding: Decimal       # total currently owed (≥ 0)
+    outstanding: Decimal       # billed-as-of-today (≥ 0); excludes future installments
+    committed: Decimal         # sum of future-dated installment expenses (≥ 0)
     cycle_spend: Decimal       # expenses in the current (open) cycle
     pending_bill: Decimal      # closed-statement amount still due
     cycle_start: date          # day after the previous statement close
@@ -162,6 +163,58 @@ def next_due_date(card: Pocket, today: date) -> date:
     return _clamp_day_to_month(year, month, card.due_day)
 
 
+def active_installment_plans(card: Pocket, today: date | None = None):
+    """Return active installment plans on `card` — plans with at least one
+    future-dated child. Each entry: group, total_amount, monthly, paid_count,
+    total_count, next_due, purchase_date, notes. Sorted by next due date.
+    """
+    from apps.transactions.models import Transaction
+
+    today = today or date.today()
+    qs = (
+        Transaction.objects.filter(pocket=card, installment_group__isnull=False)
+        .order_by("installment_group", "installment_index")
+    )
+    grouped: dict = {}
+    for t in qs:
+        g = grouped.setdefault(
+            t.installment_group,
+            {
+                "group": t.installment_group,
+                "rows": [],
+                "total_count": t.installment_total,
+                "notes": t.notes,
+            },
+        )
+        g["rows"].append(t)
+
+    out = []
+    for g in grouped.values():
+        rows = g["rows"]
+        future = [t for t in rows if t.occurred_on > today]
+        if not future:
+            continue
+        total_amount = sum((Decimal(t.amount) for t in rows), Decimal("0"))
+        monthly = Decimal(rows[0].amount)  # all but last share the same; close enough for display
+        paid_count = sum(1 for t in rows if t.occurred_on <= today)
+        next_due = min(t.occurred_on for t in future)
+        out.append(
+            {
+                "group": g["group"],
+                "total_amount": total_amount,
+                "monthly": monthly,
+                "paid_count": paid_count,
+                "total_count": g["total_count"],
+                "next_due": next_due,
+                "purchase_date": min(t.occurred_on for t in rows),
+                "notes": g["notes"],
+                "category": rows[0].category,
+            }
+        )
+    out.sort(key=lambda p: p["next_due"])
+    return out
+
+
 def card_cycle(card: Pocket, today: date | None = None) -> CardCycle:
     """Compute the active cycle snapshot for a credit-card pocket."""
     from apps.transactions.models import Transaction
@@ -182,8 +235,20 @@ def card_cycle(card: Pocket, today: date | None = None) -> CardCycle:
     )
     cycle_spend = Decimal(cycle_spend)
 
-    outstanding_signed = -balance_for(card)
+    # Outstanding = what the bank has actually billed up to today. Future
+    # installments live on the card as Transactions but shouldn't inflate
+    # the "owed now" figure.
+    outstanding_signed = -balance_for(card, as_of=today)
     outstanding = max(Decimal("0"), outstanding_signed)
+
+    committed = (
+        Transaction.objects.filter(
+            pocket=card, kind="expense", occurred_on__gt=today
+        )
+        .aggregate(s=models_sum("amount"))["s"]
+        or 0
+    )
+    committed = Decimal(committed)
 
     # Whatever was accrued before the current cycle started, minus payments —
     # i.e. the closed statement that the user must pay next.
@@ -194,6 +259,7 @@ def card_cycle(card: Pocket, today: date | None = None) -> CardCycle:
 
     return CardCycle(
         outstanding=outstanding,
+        committed=committed,
         cycle_spend=cycle_spend,
         pending_bill=pending_bill,
         cycle_start=cycle_start,

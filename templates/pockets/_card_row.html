@@ -17,6 +17,7 @@
           </div>
           <div class="text-xs text-brand-600 mt-0.5 truncate">
             Cycle {{ c.cycle_spend|rupiah }}
+            {% if c.committed %} · Committed {{ c.committed|rupiah }}{% endif %}
             {% if c.pending_bill %}
               · Bill {{ c.pending_bill|rupiah }} due in {{ c.days_until_due }}d
             {% else %}

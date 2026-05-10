@@ -33,28 +33,38 @@
           {% balance_key "pocket" pocket.id "outstanding" as outstanding_key %}
           {% balance_key "pocket" pocket.id "cycle" as cycle_key %}
           {% balance_key "pocket" pocket.id "bill" as bill_key %}
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
+          {% balance_key "pocket" pocket.id "committed" as committed_key %}
+          <div class="grid grid-cols-2 {% if cycle.committed %}sm:grid-cols-4{% else %}sm:grid-cols-3{% endif %} gap-3 sm:gap-4 mt-4">
             <div class="min-w-0">
               <div class="text-[11px] uppercase tracking-wider text-brand-600">Outstanding</div>
               <div class="mt-0.5">
-                {% include "partials/balance.html" with amount=cycle.outstanding key=outstanding_key text_class="text-xl md:text-2xl font-semibold text-expense" %}
+                {% include "partials/balance.html" with amount=cycle.outstanding key=outstanding_key text_class="text-lg md:text-2xl font-semibold text-expense" %}
               </div>
             </div>
             <div class="min-w-0">
               <div class="text-[11px] uppercase tracking-wider text-brand-600">This cycle</div>
               <div class="mt-0.5">
-                {% include "partials/balance.html" with amount=cycle.cycle_spend key=cycle_key text_class="text-xl md:text-2xl font-semibold text-brand-700" %}
+                {% include "partials/balance.html" with amount=cycle.cycle_spend key=cycle_key text_class="text-lg md:text-2xl font-semibold text-brand-700" %}
               </div>
             </div>
             <div class="min-w-0">
               <div class="text-[11px] uppercase tracking-wider text-brand-600">Bill due</div>
               <div class="mt-0.5">
-                {% include "partials/balance.html" with amount=cycle.pending_bill key=bill_key text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+                {% include "partials/balance.html" with amount=cycle.pending_bill key=bill_key text_class="text-lg md:text-2xl font-semibold text-brand-900" %}
               </div>
               <div class="text-xs text-brand-600 mt-0.5">
                 {{ cycle.due_on|date:"d M Y" }} · in {{ cycle.days_until_due }}d
               </div>
             </div>
+            {% if cycle.committed %}
+              <div class="min-w-0">
+                <div class="text-[11px] uppercase tracking-wider text-brand-600">Committed</div>
+                <div class="mt-0.5">
+                  {% include "partials/balance.html" with amount=cycle.committed key=committed_key text_class="text-lg md:text-2xl font-semibold text-brand-700" %}
+                </div>
+                <div class="text-xs text-brand-600 mt-0.5">Future installments</div>
+              </div>
+            {% endif %}
           </div>
         {% else %}
           {% balance_key "pocket" pocket.id "own" as own_key %}
@@ -105,6 +115,34 @@
       {% endif %}
     </div>
   </div>
+
+  {% if is_credit and plans %}
+  <div class="card p-5 md:p-6 mb-5">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-base font-semibold text-brand-900">Active installment plans</h2>
+      <span class="text-xs text-brand-600">{{ plans|length }} active</span>
+    </div>
+    <ul class="divide-y divide-brand-100 -mx-2">
+      {% for p in plans %}
+        <li class="flex items-center gap-3 px-2 py-2.5">
+          <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ p.category.color_token }}">
+            <i data-lucide="{{ p.category.icon }}" class="icon"></i>
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-brand-900 truncate">{{ p.notes|default:p.category.name }}</div>
+            <div class="text-xs text-brand-600 truncate">
+              {{ p.paid_count }}/{{ p.total_count }} paid · {{ p.monthly|rupiah }}/mo · next {{ p.next_due|date:"d M Y" }}
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="num font-semibold text-brand-900">{{ p.total_amount|rupiah }}</div>
+            <div class="text-[11px] text-brand-600 uppercase tracking-wider">total</div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
 
   {% if not is_credit %}
   <div class="card p-5 md:p-6 mb-5">

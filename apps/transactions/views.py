@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -50,6 +52,10 @@ def index(request):
     if cleaned.get("end"):
         txn_qs = txn_qs.filter(occurred_on__lte=cleaned["end"])
         transfer_qs = transfer_qs.filter(occurred_on__lte=cleaned["end"])
+    if not cleaned.get("show_planned"):
+        today = date.today()
+        txn_qs = txn_qs.filter(occurred_on__lte=today)
+        transfer_qs = transfer_qs.filter(occurred_on__lte=today)
     if cleaned.get("pocket"):
         p = cleaned["pocket"]
         txn_qs = txn_qs.filter(pocket=p)

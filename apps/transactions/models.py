@@ -129,6 +129,9 @@ class Transaction(models.Model):
         on_delete=models.PROTECT,
         related_name="transactions_created",
     )
+    installment_group = models.UUIDField(null=True, blank=True, db_index=True)
+    installment_index = models.PositiveSmallIntegerField(null=True, blank=True)
+    installment_total = models.PositiveSmallIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -142,6 +145,22 @@ class Transaction(models.Model):
         ]
         constraints = [
             CheckConstraint(condition=Q(amount__gt=0), name="txn_amount_positive"),
+            CheckConstraint(
+                condition=(
+                    Q(
+                        installment_group__isnull=True,
+                        installment_index__isnull=True,
+                        installment_total__isnull=True,
+                    )
+                    | Q(
+                        installment_group__isnull=False,
+                        installment_index__gte=1,
+                        installment_total__gte=2,
+                        installment_total__lte=36,
+                    )
+                ),
+                name="txn_installment_consistent",
+            ),
         ]
 
     @property
