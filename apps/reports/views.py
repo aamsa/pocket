@@ -28,7 +28,7 @@ def _parse_date(value):
 
 @login_required
 def index(request):
-    period_key = request.GET.get("period") or "month"
+    period_key = request.GET.get("period") or "last_7"
     custom_start = _parse_date(request.GET.get("start"))
     custom_end = _parse_date(request.GET.get("end"))
     period = resolve_period(period_key, custom_start, custom_end)
