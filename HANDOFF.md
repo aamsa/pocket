@@ -19,7 +19,7 @@ This is the "you're picking the project up after a long break" document. It tell
   - `raypchl` / `raypchl` (member, display name "Ray")
 - **Latest deployed commit**: see `git log origin/main -1` after this hand-off lands
 
-## What got built (chronological, four passes)
+## What got built (chronological)
 
 ### Pass 1 — Emil-style motion polish
 
@@ -60,7 +60,7 @@ The user reported six concrete issues from screenshots on a real iPhone. All fix
 | --- | --- | --- |
 | 1 | Page-header `+` button overflowing right edge | All `flex items-end justify-between` headers got `min-w-0 flex-1` on text + `shrink-0` on actions |
 | 2 | "Recent activity" rows showing `S…` for category names | Restructured rows: name on line 1, chips/meta on line 2 |
-| 3 | Total Balance showing `Rp 454.750.000` (12 future salaries inflating it) instead of realised `Rp 4.750.000` | At the time, `balance_for` was made to default `as_of=date.today()` to clip future-dated rule rows. Now obsolete after Pass 6 removed the scheduled feature; the default is again all-time. |
+| 3 | Total Balance showing `Rp 454.750.000` (12 future salaries inflating it) instead of realised `Rp 4.750.000` | `balance_for(as_of=None)` defaults to all-time as of Pass 6. Past-only filtering came back in Pass 8 for installment plans, but applied at the view layer (Dashboard latest list, Transactions index) rather than baked into `balance_for`. The card-level cycle math (`card_cycle.outstanding`) clips at today via `balance_for(card, as_of=today)` so future installments don't inflate "owed now". |
 | 4 | Bottom-tab bar reading as a floating chip | Switched from `bg-brand-50/95 backdrop-blur` to opaque cream + `shadow-[0_-4px_16px_-8px_rgb(88_49_1_/_0.12)]`. Bumped `<main>` bottom padding to `calc(env(safe-area-inset-bottom)+6.5rem)` |
 | 5 | Projections monthly chart wider than card | (Mooted — Projections removed in Pass 6.) |
 | 6 | "M…" truncated wallet name | Same row restructure as #2 — name gets full line 1, chips drop to line 2 |
@@ -81,23 +81,73 @@ Per user request, the **`RecurringRule`** model + materialiser and the **`/proje
 - Reverted the past-only-by-default filtering on Dashboard aggregates / latest list / Transactions index, and dropped the `as_of=date.today()` default on `balance_for`.
 - The `_running_balance_at` helper in `apps/reports/services.py` was kept — Reports' own pocket-balances chart still uses it.
 
+### Pass 7 — Reports + Pocket detail revamp
+
+Two surfaces redesigned:
+
+1. **Reports** (`apps/reports/`):
+   - Added `last_7`, `last_14`, `last_30` to `PERIOD_CHOICES` alongside the existing options. Default period changed to `last_7` so `/reports/` opens with the most recent week.
+   - Added a **Category** filter to the form. Applies to Income vs Expense and Top transactions; the Spending-by-category donut suppresses itself when a single category is selected (its breakdown would be redundant).
+   - Refactored `pocket_balances_over_time` to emit a **single combined area series** instead of one per pocket (capped at 6). Default series name `"Overall"`; pick a specific pocket to narrow it (renamed to `<name>` or `<name> (downstream)` when sub-pockets are included). Boundary-crossing transfer math means intra-scope transfers cancel cleanly. Panel renamed "Balance over time".
+
+2. **Pocket detail** (`/pockets/<id>/`): new card panel between Sub-pockets and Recent activity holds two charts — a downstream balance area chart with the eye-curtain (per-pocket localStorage key `pocket-balance-vis:detail:<uuid>:balance`) and a category-spending donut. Quick filter chips `7d / 14d / 30d` (default 30) HTMX-swap only the panel. Scope is `descendant_ids_with_self()` to mirror the Downstream total card. Empty states explain "no activity in the last N days".
+
+### Pass 8 — Credit-card support + installment plans
+
+Two related features that ship together because the cycle math is the same primitive:
+
+1. **Credit-card pockets** (`Pocket.kind`):
+   - New fields on `Pocket`: `kind` (`"cash"` | `"credit"`, default cash), `statement_day` (1–28), `due_day` (1–28). CheckConstraints enforce credit-only fields, Main is always cash, and day ranges. Migration `pockets.0003_credit_cards`.
+   - New `apps.pockets.services.card_cycle(card)` returns a `CardCycle(outstanding, committed, cycle_spend, pending_bill, due_on, days_until_due)` snapshot. `outstanding` is **clipped at today** (`balance_for(card, as_of=today)`) so future-dated rows don't inflate "owed now". `committed` is the sum of future-dated expenses (relevant once installments exist).
+   - **Pockets list** keeps cash pockets in the existing tree and renders credit cards in a separate flat **Cards** section (`templates/pockets/_card_row.html`). Each card row shows owed (terracotta), `Cycle Rp X · Committed Rp Y · Bill Rp Z due in Wd`, and a Pay button (deep-links to `/transfers/new/?to=<card>&amount=<bill>`) when there's a closed bill.
+   - **Pocket detail page** for a credit card switches to a 4-figure layout (Outstanding / This cycle / Bill due / Committed; mobile collapses to 2×2), hides Sub-pockets, and adds a primary Pay-bill button. An "Active installment plans" panel lists each plan with `M of N paid · Rp X /mo · next due <date>` plus the total.
+   - **Dashboard** headline splits into **Cash / Owed / Net** (each with its own eye-curtain key) when the user has at least one card; otherwise it stays single-figure Total balance.
+   - **Repayment** reuses the existing Transfer flow; `transfer_new` view now reads `?to=` and `?amount=` GET params for pre-fill (mirrors the existing `?from=`).
+
+2. **Installment plans (cicilan)**:
+   - New nullable Transaction fields: `installment_group` (UUID), `installment_index` (1..N), `installment_total` (N). CheckConstraint `txn_installment_consistent` enforces that all three are NULL or all set with `installment_total` between 2 and 36. Migration `transactions.0004_installments`.
+   - When entering a credit-card expense, the New expense form reveals an optional **Installments** select (Single / 3 / 6 / 12 / 24 months). Saving with months > 1 materialises N expense Transactions on the card sharing one `installment_group` UUID, monthly amounts (last child eats the remainder so children sum exactly to the entered total), with `occurred_on` = purchase day shifted forward k−1 months and clamped to month-end via `apps.pockets.services._clamp_day_to_month`. Editing an existing installment child treats it as a regular Transaction (no installment selector).
+   - **Past-only-by-default filter restored** for surfaces that read as "what has happened" (Dashboard latest list, Dashboard monthly aggregates, Transactions index). The Transactions filter form's `show_planned` checkbox opts back into seeing future-dated rows, which render with italics + a "Planned" chip + a "Cicilan k/N" chip via `templates/transactions/_list.html`. Reports surfaces are unaffected (period-bounded already).
+
+### Pass 9 — Polish bug-fixes from real-device usage
+
+- **`occurred_on` not pre-filling on edit forms**: Django's `DateInput` widget defaults to the locale format (id-id → `"09-05-2026"`), but `<input type="date">` only accepts ISO `YYYY-MM-DD` and silently leaves the field empty otherwise. Pinned `format="%Y-%m-%d"` on `TransactionForm` and `TransferForm`'s `occurred_on` widgets.
+- **Cash / Owed / Net dashboard card overflowing on mobile**: `grid-cols-3` always-on forced 9-digit IDR amounts plus eye-toggle buttons into ~110px each. Switched to `grid-cols-1 sm:grid-cols-3` — on mobile each row is `[label]·····[amount]` baseline-aligned; at `sm:` and up it returns to the stacked 3-up. Mobile font dropped from text-xl to text-lg.
+- **Add expense form Alpine error mentioning `Math.floor`**: The `pocketKind` getter embedded `\"` inside a double-quoted `x-data` attribute. HTML doesn't recognise `\"` as escape — the parser treated `"` as the attribute terminator and the rest of the JS became malformed HTML. Moved the data factory into a `<script>` tag before the form and used Alpine's `init()` lifecycle to attach a change listener on the pocket select.
+- **Pocket not pre-filling on edit transaction**: Stale `x-model="pocketId"` on the pocket widget from an earlier Alpine state shape; `pocketId` no longer existed in the data object after the `txnForm()` refactor, so Alpine bound the select to undefined on mount and wiped the server-rendered `selected`. Removed the stale `x-model`.
+- **More page navigation**: added an **All transactions** link above Categories on the Settings/More page.
+
 ## What's deferred (still not built)
 
 - **CSV import / export.** Useful for migrating existing spreadsheet data; not blocking.
 - **Soft-delete restore UI for pockets.** The model supports archive + unarchive (the `archive`/`unarchive` views exist), but there's no list of archived pockets to restore from. Today, restoring requires the Django shell.
 - **Multi-currency.** Out of scope by design — IDR-only is a deliberate constraint.
-- **Pocket-level transaction filtering visualisation tweaks.** Period filtering on the Pocket detail's Recent activity card. Today the activity card just shows the latest 10 rows; users have to click View all to filter.
+- **Bulk installment-plan operations.** Today each installment is a regular Transaction, edited or deleted individually. "Cancel the whole plan" and "refinance / change months" are deferred. Probably v2: a button on the card-detail Active-plans panel.
+- **Non-zero interest installments.** v1 assumes 0% (Indonesian merchant cicilan default). If the user ever uses a paid-installment plan, the children would still be correct expense rows but the "total = months × monthly" assumption would understate the true cost.
 - **Notification system / email digests.** Not on the roadmap.
+- **Tests.** No automated tests yet. The verification flow in README.md is manual.
 
 ## Load-bearing details (don't refactor without preserving these)
 
 1. **Eye toggle / chart-mask system.** `templates/partials/balance.html` keeps its Alpine state inlined (not registered via `Alpine.data()`) after a stale-cache incident on iOS Safari. The `.chart-mask` sister system in `static/css/input.css` and the `pocket-balance-vis:` localStorage namespace are the same primitive. Documented in CLAUDE.md.
 
-2. **Motion conventions.** Easing tokens (`--ease-snap`, `--ease-glide`) and the focus-visible/focus split are documented in CLAUDE.md. Don't introduce one-off cubic-beziers; extend the token set.
+2. **`<input type="date">` requires ISO format.** Both `TransactionForm` and `TransferForm` pin `format="%Y-%m-%d"` on the `occurred_on` widget. Do not remove — `LANGUAGE_CODE = "id-id"` would otherwise default to `dd-mm-yyyy` and silently break the edit-form pre-fill.
 
-3. **No Django admin.** The default `django.contrib.admin` is intentionally absent from `INSTALLED_APPS`. All operations are CLI commands or custom pages. Don't add the admin back without thinking through the design implications.
+3. **`card_cycle.outstanding` clips at today.** `apps.pockets.services.card_cycle()` calls `balance_for(card, as_of=today)` so future-dated installment rows don't inflate "owed now". The `committed` figure is the sum of future-dated expense Transactions. If you ever change `card_cycle()`, preserve this split — it's the only thing keeping installment plans honest.
 
-4. **No public registration.** Accounts are seeded via `python manage.py createuser` and gated by the auth middleware. There is no `/register` route — by design.
+4. **Past-only-by-default on history surfaces.** Once installment plans exist, future-dated `Transaction` rows live in the DB. The Dashboard latest list, Dashboard monthly aggregates, and the default Transactions list filter `occurred_on__lte=today`. The `show_planned` checkbox on the Transactions filter form opts back into seeing future entries (rendered with italics + a Planned chip + a Cicilan k/N chip). Reports surfaces keep period-bounded semantics — no clip needed.
+
+5. **Installment integrity.** `Transaction` rows in a plan share an `installment_group` UUID; `installment_index` is 1..N and `installment_total` is N. The CheckConstraint `txn_installment_consistent` enforces all-NULL-or-all-set. Per-installment amounts use integer division with the **last child eating any remainder** so the children sum exactly to the entered total. Editing an existing installment child treats it as a normal Transaction; bulk plan operations (cancel-all, refinance) are deferred.
+
+6. **UUID primary keys + `_state.adding`.** Every domain model has a UUID PK with `default=uuid.uuid4`, which means `instance.pk` is **truthy** even on unsaved new instances. To distinguish new vs edit in form code, use `self.instance._state.adding` (True for new). Don't gate edit-form behavior on `self.instance.pk` — it'll always look like an edit.
+
+7. **Alpine `x-data` is inside an HTML attribute.** Don't put `\"` inside a double-quoted `x-data="..."` block — HTML doesn't honor backslash escapes inside attributes and will truncate at the first unescaped `"`. For complex Alpine state, define a function in a `<script>` tag and reference it as `x-data="myFn()"`.
+
+8. **Motion conventions.** Easing tokens (`--ease-snap`, `--ease-glide`) and the focus-visible/focus split are documented in CLAUDE.md. Don't introduce one-off cubic-beziers; extend the token set.
+
+9. **No Django admin.** The default `django.contrib.admin` is intentionally absent from `INSTALLED_APPS`. All operations are CLI commands or custom pages. Don't add the admin back without thinking through the design implications.
+
+10. **No public registration.** Accounts are seeded via `python manage.py createuser` and gated by the auth middleware. There is no `/register` route — by design.
 
 ## Operational notes
 
@@ -107,7 +157,7 @@ Per user request, the **`RecurringRule`** model + materialiser and the **`/proje
 - **Cloudflare SSL mode**: must stay on **Full** (not Full Strict). Origin uses snakeoil; Full Strict would refuse the connection.
 - **Logs**: `journalctl -u pocket` is the gunicorn log (access + error). Nginx access goes to `/var/log/nginx/access.log` (all vhosts mixed; grep for `pocket.ionyx.org`).
 
-## Things to watch the first week
+## Operational health to watch
 
 - Whether real users hit any overflow / truncation regressions on devices we didn't test (iPhone SE 320px is the floor we tested at; older Android phones may render differently).
 - Postgres connection count — `sudo -u postgres psql -c 'SELECT count(*) FROM pg_stat_activity'` periodically, since other services on the droplet share the same Postgres instance.
@@ -118,7 +168,7 @@ Per user request, the **`RecurringRule`** model + materialiser and the **`/proje
 
 If picking this up, in order of leverage:
 1. **Backups.** Daily `pg_dump pocket | xz` to off-droplet storage. Single most important missing piece.
-2. **Archive-restore UI for pockets.** Closes the "model supports it but no view" loop; small surface.
-3. **CSV import.** Lets the user migrate any pre-existing spreadsheet data.
-4. **Per-pocket transaction filtering** on the detail page (period picker on the activity card).
-5. **Tests.** No automated tests yet. The verification flow in README.md is manual; first targets for `pytest` would be the `balance_for` semantics and the period-filter logic in `apps/reports/services.py`.
+2. **Bulk installment-plan operations.** A "Cancel plan" button on the Active plans panel that deletes future-dated children but keeps the past actuals (a one-line ORM call); plus a "Refinance" affordance that re-materialises remaining months. Small, high-utility surface.
+3. **Archive-restore UI for pockets.** Closes the "model supports it but no view" loop; small surface.
+4. **CSV import.** Lets the user migrate any pre-existing spreadsheet data.
+5. **Tests.** No automated tests yet. First targets for `pytest`: the `balance_for` / `card_cycle` semantics, the installment materialiser's date math (especially month-end clamping for plans starting on the 31st), and the period-filter logic in `apps/reports/services.py`.
