@@ -44,8 +44,11 @@
            }
          }"
          :class="{ 'chart-hidden': !visible }">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-semibold text-brand-900">Pocket balances</h2>
+      <div class="flex items-center justify-between mb-3 gap-3">
+        <div class="min-w-0">
+          <h2 class="text-base font-semibold text-brand-900">Balance over time</h2>
+          <p class="text-xs text-brand-600 truncate">{{ balance_series_name }}</p>
+        </div>
         {% if pocket_balances.has_data %}
           <button type="button" @click.stop.prevent="toggle()"
                   class="text-brand-500 hover:text-brand-700 active:scale-90 p-2 -m-2 rounded-full transition-[color,transform] duration-150 ease-snap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40"
@@ -62,7 +65,7 @@
           <div class="chart-overlay absolute inset-0 rounded-xl bg-brand-50/85 backdrop-blur-md grid place-items-center text-center">
             <div>
               <div class="num text-2xl font-semibold tracking-widest select-none text-brand-700">Rp ••••</div>
-              <p class="text-xs text-brand-600 mt-2">Tap the eye to reveal pocket balances.</p>
+              <p class="text-xs text-brand-600 mt-2">Tap the eye to reveal the balance line.</p>
             </div>
           </div>
         </div>

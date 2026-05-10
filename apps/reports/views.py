@@ -44,6 +44,17 @@ def index(request):
         .order_by("name")
     )
 
+    if pocket_id:
+        chosen = next((p for p in visible_pockets if str(p.id) == pocket_id), None)
+        if chosen is not None:
+            balance_series_name = (
+                f"{chosen.name} (downstream)" if include_children else chosen.name
+            )
+        else:
+            balance_series_name = "Overall"
+    else:
+        balance_series_name = "Overall"
+
     ctx = {
         "period_key": period_key,
         "period": period,
@@ -55,7 +66,10 @@ def index(request):
         "visible_pockets": visible_pockets,
         "income_vs_expense": income_vs_expense(request.user, period, pocket_ids),
         "spending_by_category": spending_by_category(request.user, period, pocket_ids),
-        "pocket_balances": pocket_balances_over_time(request.user, period, pocket_ids),
+        "pocket_balances": pocket_balances_over_time(
+            request.user, period, pocket_ids, series_name=balance_series_name
+        ),
+        "balance_series_name": balance_series_name,
         "top_transactions": top_transactions(request.user, period, pocket_ids),
     }
     template = "reports/_panels.html" if request.headers.get("HX-Request") else "reports/index.html"

@@ -19,10 +19,16 @@ from apps.transactions.models import Category, Transaction, Transfer
 PERIOD_CHOICES = [
     ("week", "This week"),
     ("month", "This month"),
+    ("last_7", "Last 7 days"),
+    ("last_14", "Last 14 days"),
+    ("last_30", "Last 30 days"),
     ("quarter", "Last 3 months"),
     ("year", "This year"),
     ("custom", "Custom"),
 ]
+
+
+_LAST_N_DAYS = {"last_7": 7, "last_14": 14, "last_30": 30}
 
 
 @dataclass
@@ -45,6 +51,9 @@ def resolve_period(period_key: str, start: date | None, end: date | None) -> Per
     if period_key == "week":
         s = today - timedelta(days=today.weekday())
         return Period(s, s + timedelta(days=6), "This week", "day")
+    if period_key in _LAST_N_DAYS:
+        n = _LAST_N_DAYS[period_key]
+        return Period(today - timedelta(days=n - 1), today, f"Last {n} days", "day")
     if period_key == "quarter":
         s = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
         s = (s.replace(day=1) - timedelta(days=1)).replace(day=1)
@@ -195,85 +204,91 @@ def spending_by_category(user, period: Period, pocket_ids: list):
     }
 
 
-def pocket_balances_over_time(user, period: Period, pocket_ids: list):
-    """Running balance per pocket over the period. Cumulative from the
-    starting balance at period.start."""
-    pockets = list(
-        Pocket.objects.filter(pk__in=pocket_ids)
-        .select_related("owner")
-        .order_by("name")
-    )
+def pocket_balances_over_time(user, period: Period, pocket_ids: list, *, series_name: str = "Overall"):
+    """Combined running balance across `pocket_ids` over the period.
 
-    starting = {}
-    for p in pockets:
-        starting[p.id] = _running_balance_at(p.id, period.start - timedelta(days=1))
+    One series. Starting balance = sum of each pocket's balance at period.start - 1d.
+    Per-bucket delta = transactions on any pocket in scope (income +, expense −),
+    plus transfers that *cross the boundary* of pocket_ids (transfers wholly
+    inside the scope cancel out, mirroring `balance_for(include_descendants=True)`).
+    """
+    if not pocket_ids:
+        return {"has_data": False, "options": {}}
+
+    starting = sum(
+        (_running_balance_at(pid, period.start - timedelta(days=1)) for pid in pocket_ids),
+        Decimal("0"),
+    )
 
     buckets = _all_buckets(period)
     bucket_keys = [_bucket_key(b, period.granularity) for b in buckets]
     bucket_labels = [_bucket_label(b, period.granularity) for b in buckets]
 
-    series = []
-    for p in pockets[:6]:  # cap to 6 series for legibility
-        per_bucket_delta = defaultdict(Decimal)
-        for row in (
-            Transaction.objects.filter(
-                pocket_id=p.id,
-                occurred_on__gte=period.start,
-                occurred_on__lte=period.end,
-            )
-            .values("kind", "occurred_on")
-            .annotate(total=Sum("amount"))
-        ):
-            sign = 1 if row["kind"] == "income" else -1
-            per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] += (
-                sign * Decimal(row["total"] or 0)
-            )
-        for row in (
-            Transfer.objects.filter(
-                to_pocket_id=p.id,
-                occurred_on__gte=period.start,
-                occurred_on__lte=period.end,
-            )
-            .values("occurred_on")
-            .annotate(total=Sum("amount"))
-        ):
-            per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] += Decimal(
-                row["total"] or 0
-            )
-        for row in (
-            Transfer.objects.filter(
-                from_pocket_id=p.id,
-                occurred_on__gte=period.start,
-                occurred_on__lte=period.end,
-            )
-            .values("occurred_on")
-            .annotate(total=Sum("amount"))
-        ):
-            per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] -= Decimal(
-                row["total"] or 0
-            )
+    per_bucket_delta = defaultdict(Decimal)
 
-        running = starting[p.id]
-        data = []
-        for key in bucket_keys:
-            running += per_bucket_delta.get(key, Decimal("0"))
-            data.append(int(running))
-        series.append({"name": p.name, "data": data})
+    for row in (
+        Transaction.objects.filter(
+            pocket_id__in=pocket_ids,
+            occurred_on__gte=period.start,
+            occurred_on__lte=period.end,
+        )
+        .values("kind", "occurred_on")
+        .annotate(total=Sum("amount"))
+    ):
+        sign = 1 if row["kind"] == "income" else -1
+        per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] += (
+            sign * Decimal(row["total"] or 0)
+        )
 
+    # Boundary-crossing transfers only — intra-scope transfers cancel.
+    for row in (
+        Transfer.objects.filter(
+            to_pocket_id__in=pocket_ids,
+            occurred_on__gte=period.start,
+            occurred_on__lte=period.end,
+        )
+        .exclude(from_pocket_id__in=pocket_ids)
+        .values("occurred_on")
+        .annotate(total=Sum("amount"))
+    ):
+        per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] += Decimal(
+            row["total"] or 0
+        )
+    for row in (
+        Transfer.objects.filter(
+            from_pocket_id__in=pocket_ids,
+            occurred_on__gte=period.start,
+            occurred_on__lte=period.end,
+        )
+        .exclude(to_pocket_id__in=pocket_ids)
+        .values("occurred_on")
+        .annotate(total=Sum("amount"))
+    ):
+        per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] -= Decimal(
+            row["total"] or 0
+        )
+
+    running = starting
+    data = []
+    for key in bucket_keys:
+        running += per_bucket_delta.get(key, Decimal("0"))
+        data.append(int(running))
+
+    has_data = any(data) or starting != 0
     return {
-        "has_data": bool(series),
+        "has_data": has_data,
         "options": {
             "chart": {"type": "area", "toolbar": {"show": False}, "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
             "stroke": {"curve": "smooth", "width": 2},
             "fill": {"type": "gradient", "gradient": {"opacityFrom": 0.45, "opacityTo": 0.08}},
             "dataLabels": {"enabled": False},
-            "colors": _BRAND_RAMP[:6],
+            "colors": [_BRAND_RAMP[0]],
             "grid": {"borderColor": _GRID_COLOR, "strokeDashArray": 4},
-            "legend": {"position": "top", "horizontalAlign": "right", "fontSize": "12px"},
+            "legend": {"show": False},
             "xaxis": {"categories": bucket_labels, "labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
             "yaxis": {"labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
-            "tooltip": {"shared": True, "theme": "light"},
-            "series": series,
+            "tooltip": {"theme": "light"},
+            "series": [{"name": series_name, "data": data}],
             "_format": "rupiah",
         },
     }

@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -6,6 +8,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+from apps.reports.services import (
+    Period,
+    pocket_balances_over_time,
+    spending_by_category,
+)
 from apps.transactions.models import Transaction, Transfer
 
 from .forms import PocketForm, ShareInviteForm
@@ -21,6 +28,8 @@ from .permissions import can_manage, can_view, require_pocket_permission
 from .services import balance_for, shared_pocket_groups, user_pocket_tree
 
 POCKET_RECENT_LIMIT = 10
+POCKET_DETAIL_RANGES = (7, 14, 30)
+POCKET_DETAIL_DEFAULT_RANGE = 30
 
 
 @login_required
@@ -87,6 +96,36 @@ def new(request):
 @login_required
 @require_pocket_permission("view")
 def detail(request, pocket):
+    try:
+        days = int(request.GET.get("range", POCKET_DETAIL_DEFAULT_RANGE))
+    except (TypeError, ValueError):
+        days = POCKET_DETAIL_DEFAULT_RANGE
+    if days not in POCKET_DETAIL_RANGES:
+        days = POCKET_DETAIL_DEFAULT_RANGE
+
+    today = date.today()
+    period = Period(today - timedelta(days=days - 1), today, f"Last {days} days", "day")
+    pocket_ids = pocket.descendant_ids_with_self()
+    series_name = f"{pocket.name} (downstream)" if len(pocket_ids) > 1 else pocket.name
+
+    balance_chart = pocket_balances_over_time(
+        request.user, period, pocket_ids, series_name=series_name
+    )
+    spending_chart = spending_by_category(request.user, period, pocket_ids)
+
+    if request.headers.get("HX-Request"):
+        return render(
+            request,
+            "pockets/_detail_charts.html",
+            {
+                "pocket": pocket,
+                "range_days": days,
+                "range_choices": POCKET_DETAIL_RANGES,
+                "balance_chart": balance_chart,
+                "spending_chart": spending_chart,
+            },
+        )
+
     children = list(pocket.children.all().active())
     own_balance = balance_for(pocket, include_descendants=False)
     downstream_balance = balance_for(pocket, include_descendants=True)
@@ -122,6 +161,10 @@ def detail(request, pocket):
             "downstream_balance": downstream_balance,
             "ancestors": list(pocket.ancestors())[::-1],  # root first
             "rows": rows,
+            "range_days": days,
+            "range_choices": POCKET_DETAIL_RANGES,
+            "balance_chart": balance_chart,
+            "spending_chart": spending_chart,
         },
     )
 
