@@ -20,19 +20,31 @@
       </h1>
     </div>
 
+    <script>
+      function txnForm() {
+        return {
+          amount: '{% if form.amount.value %}{{ form.amount.value|rupiah_plain }}{% endif %}',
+          pocketKind: 'cash',
+          kind: '{{ form.kind.value|default:kind }}',
+          months: {{ form.installment_months.value|default:1 }},
+          init() {
+            const sel = this.$el.querySelector('select[name=pocket]');
+            if (sel) {
+              const readKind = () => {
+                const opt = sel.options[sel.selectedIndex];
+                this.pocketKind = (opt && opt.dataset.kind) || 'cash';
+              };
+              readKind();
+              sel.addEventListener('change', readKind);
+            }
+          },
+          get rawAmount() { return parseInt((this.amount || '').replace(/\D+/g,''), 10) || 0; },
+          get monthly() { return this.months > 1 ? Math.floor(this.rawAmount / this.months) : 0; },
+        };
+      }
+    </script>
     <form method="post" class="card p-5 md:p-6 flex flex-col gap-4"
-          x-data="{
-            amount: '{% if form.amount.value %}{{ form.amount.value|rupiah_plain }}{% endif %}',
-            pocketId: '{{ form.pocket.value|default:'' }}',
-            months: {{ form.installment_months.value|default:1 }},
-            get pocketKind() {
-              const opt = this.$el.querySelector(`select[name=pocket] option[value=\"${this.pocketId}\"]`);
-              return opt ? (opt.dataset.kind || 'cash') : '';
-            },
-            get kind() { return '{{ form.kind.value|default:kind }}'; },
-            get rawAmount() { return parseInt((this.amount || '').replace(/\D+/g,''), 10) || 0; },
-            get monthly() { return this.months > 1 ? Math.floor(this.rawAmount / this.months) : 0; }
-          }">
+          x-data="txnForm()">
       {% csrf_token %}
       {{ form.kind }}
 
