@@ -36,23 +36,23 @@
   <section class="grid gap-3 md:gap-4 md:grid-cols-3 mb-6">
     {% if has_cards %}
       <div class="card p-5 md:col-span-3">
-        <div class="grid grid-cols-3 gap-4">
-          <div class="min-w-0">
-            <div class="text-xs uppercase tracking-wider text-brand-600">Cash</div>
-            <div class="mt-2">
-              {% include "partials/balance.html" with amount=cash_total key="dashboard:cash" text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div class="min-w-0 flex items-baseline justify-between sm:block gap-3">
+            <div class="text-xs uppercase tracking-wider text-brand-600 shrink-0">Cash</div>
+            <div class="sm:mt-2 min-w-0">
+              {% include "partials/balance.html" with amount=cash_total key="dashboard:cash" text_class="text-lg md:text-2xl font-semibold text-brand-900" %}
             </div>
           </div>
-          <div class="min-w-0">
-            <div class="text-xs uppercase tracking-wider text-brand-600">Owed</div>
-            <div class="mt-2">
-              {% include "partials/balance.html" with amount=owed_total key="dashboard:owed" text_class="text-xl md:text-2xl font-semibold text-expense" %}
+          <div class="min-w-0 flex items-baseline justify-between sm:block gap-3">
+            <div class="text-xs uppercase tracking-wider text-brand-600 shrink-0">Owed</div>
+            <div class="sm:mt-2 min-w-0">
+              {% include "partials/balance.html" with amount=owed_total key="dashboard:owed" text_class="text-lg md:text-2xl font-semibold text-expense" %}
             </div>
           </div>
-          <div class="min-w-0">
-            <div class="text-xs uppercase tracking-wider text-brand-600">Net</div>
-            <div class="mt-2">
-              {% include "partials/balance.html" with amount=net_total key="dashboard:net" text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+          <div class="min-w-0 flex items-baseline justify-between sm:block gap-3">
+            <div class="text-xs uppercase tracking-wider text-brand-600 shrink-0">Net</div>
+            <div class="sm:mt-2 min-w-0">
+              {% include "partials/balance.html" with amount=net_total key="dashboard:net" text_class="text-lg md:text-2xl font-semibold text-brand-900" %}
             </div>
           </div>
         </div>
