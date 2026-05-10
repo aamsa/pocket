@@ -106,7 +106,7 @@ class TransactionForm(forms.ModelForm):
             self.fields["pocket"].queryset = pocket_qs
             kind_lookup = {str(p.id): p.kind for p in pocket_qs}
             self.fields["pocket"].widget = PocketKindSelect(
-                attrs={"class": input_class, "x-model": "pocketId"},
+                attrs={"class": input_class},
                 kind_lookup=kind_lookup,
             )
             self.fields["pocket"].widget.choices = self.fields["pocket"].choices
