@@ -48,7 +48,8 @@ class TransactionForm(forms.ModelForm):
             "kind": forms.HiddenInput(),
             "category": forms.Select(attrs={"class": input_class}),
             "occurred_on": forms.DateInput(
-                attrs={"class": input_class, "type": "date"}
+                attrs={"class": input_class, "type": "date"},
+                format="%Y-%m-%d",
             ),
             "notes": forms.TextInput(
                 attrs={"class": input_class, "placeholder": "Optional"}
@@ -122,7 +123,9 @@ class TransferForm(forms.ModelForm):
         widgets = {
             "from_pocket": forms.Select(attrs={"class": input_class}),
             "to_pocket": forms.Select(attrs={"class": input_class}),
-            "occurred_on": forms.DateInput(attrs={"class": input_class, "type": "date"}),
+            "occurred_on": forms.DateInput(
+                attrs={"class": input_class, "type": "date"}, format="%Y-%m-%d"
+            ),
             "notes": forms.TextInput(
                 attrs={"class": input_class, "placeholder": "Optional"}
             ),
