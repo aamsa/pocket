@@ -1,0 +1,42 @@
+{% load money %}
+{% with p=row.pocket c=row.cycle %}
+  <li>
+    <div class="depth-row flex items-center gap-3 pr-4 py-3"
+         style="--depth: 0">
+      <a href="{% url 'pockets:detail' p.id %}"
+         class="flex items-center gap-3 flex-1 min-w-0 active:scale-[.99] transition-transform duration-150 ease-snap">
+        <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ p.color_token }}">
+          <i data-lucide="{{ p.icon }}" class="icon"></i>
+        </span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-medium text-brand-900 truncate">{{ p.name }}</span>
+            {% if row.permission %}
+              <span class="chip shrink-0">{% if row.permission == 'manage' %}Manage{% else %}View{% endif %}</span>
+            {% endif %}
+          </div>
+          <div class="text-xs text-brand-600 mt-0.5 truncate">
+            Cycle {{ c.cycle_spend|rupiah }}
+            {% if c.pending_bill %}
+              · Bill {{ c.pending_bill|rupiah }} due in {{ c.days_until_due }}d
+            {% else %}
+              · No bill due
+            {% endif %}
+          </div>
+        </div>
+      </a>
+      {% balance_key "pocket" p.id "owed" as bkey %}
+      <div class="text-right shrink-0">
+        {% include "partials/balance.html" with amount=row.balance key=bkey text_class="font-semibold text-expense" %}
+        <div class="text-[11px] text-brand-600 uppercase tracking-wider">owed</div>
+      </div>
+      {% if c.pending_bill and row.permission != 'view' %}
+        <a href="{% url 'transfers:new' %}?to={{ p.id }}&amount={{ c.pending_bill }}"
+           class="btn-secondary shrink-0">
+          <i data-lucide="banknote" class="icon"></i>
+          <span class="hidden sm:inline">Pay</span>
+        </a>
+      {% endif %}
+    </div>
+  </li>
+{% endwith %}

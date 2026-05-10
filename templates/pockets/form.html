@@ -18,16 +18,36 @@
       </h1>
     </div>
 
-    <form method="post" class="card p-5 md:p-6 flex flex-col gap-4">
+    <form method="post" class="card p-5 md:p-6 flex flex-col gap-4"
+          x-data="{ kind: '{{ form.kind.value|default:'cash' }}' }">
       {% csrf_token %}
+
       {% for field in form %}
-        <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
-          {{ field }}
-          {% if field.help_text %}<span class="text-xs text-brand-600">{{ field.help_text|safe }}</span>{% endif %}
-          {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
-        </label>
+        {% if field.name == 'parent' %}
+          <label class="flex flex-col gap-1.5" x-show="kind === 'cash'" x-cloak>
+            <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
+            {{ field }}
+            {% if field.help_text %}<span class="text-xs text-brand-600">{{ field.help_text|safe }}</span>{% endif %}
+            {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+          </label>
+          <p class="text-xs text-brand-600 -mt-2" x-show="kind === 'credit'" x-cloak>Cards live in their own flat list — no parent.</p>
+        {% elif field.name == 'statement_day' or field.name == 'due_day' %}
+          <label class="flex flex-col gap-1.5" x-show="kind === 'credit'" x-cloak>
+            <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
+            {{ field }}
+            {% if field.help_text %}<span class="text-xs text-brand-600">{{ field.help_text|safe }}</span>{% endif %}
+            {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+          </label>
+        {% else %}
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
+            {{ field }}
+            {% if field.help_text %}<span class="text-xs text-brand-600">{{ field.help_text|safe }}</span>{% endif %}
+            {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+          </label>
+        {% endif %}
       {% endfor %}
+
       {% if form.non_field_errors %}
         <div class="rounded-xl bg-expense/10 border border-expense/20 px-4 py-3 text-sm text-expense">
           {{ form.non_field_errors|first }}

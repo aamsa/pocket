@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 from apps.pockets.models import (
+    POCKET_KIND_CREDIT,
     SHARE_STATUS_PENDING,
     Pocket,
     PocketShare,
@@ -36,10 +37,17 @@ def dashboard(request):
         .order_by("-is_main", "owner_id", "name")
     )
 
-    total_balance = sum(
-        (balance_for(p, include_descendants=False) for p in visible_pockets),
-        Decimal("0"),
-    )
+    cash_total = Decimal("0")
+    owed_total = Decimal("0")
+    net_total = Decimal("0")
+    for p in visible_pockets:
+        b = balance_for(p, include_descendants=False)
+        net_total += b
+        if p.kind == POCKET_KIND_CREDIT:
+            owed_total += max(Decimal("0"), -b)
+        else:
+            cash_total += b
+    has_cards = any(p.kind == POCKET_KIND_CREDIT for p in visible_pockets)
 
     today = date.today()
     month_start, next_month = _month_range(today)
@@ -73,7 +81,10 @@ def dashboard(request):
         request,
         "dashboard.html",
         {
-            "total_balance": total_balance,
+            "cash_total": cash_total,
+            "owed_total": owed_total,
+            "net_total": net_total,
+            "has_cards": has_cards,
             "income_total": income_total,
             "expense_total": expense_total,
             "month_label": month_start.strftime("%B %Y"),

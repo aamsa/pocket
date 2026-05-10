@@ -2,8 +2,15 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+from django.db.models import CheckConstraint, Q
 
+
+POCKET_KIND_CASH = "cash"
+POCKET_KIND_CREDIT = "credit"
+POCKET_KIND_CHOICES = [
+    (POCKET_KIND_CASH, "Cash"),
+    (POCKET_KIND_CREDIT, "Credit card"),
+]
 
 POCKET_ICON_CHOICES = [
     ("wallet", "Wallet"),
@@ -42,6 +49,12 @@ class PocketQuerySet(models.QuerySet):
     def owned_by(self, user):
         return self.filter(owner=user)
 
+    def cash(self):
+        return self.filter(kind=POCKET_KIND_CASH)
+
+    def credit(self):
+        return self.filter(kind=POCKET_KIND_CREDIT)
+
 
 class Pocket(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -59,6 +72,11 @@ class Pocket(models.Model):
         related_name="children",
     )
     is_main = models.BooleanField(default=False)
+    kind = models.CharField(
+        max_length=8, choices=POCKET_KIND_CHOICES, default=POCKET_KIND_CASH
+    )
+    statement_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    due_day = models.PositiveSmallIntegerField(null=True, blank=True)
     icon = models.CharField(max_length=40, default="wallet", choices=POCKET_ICON_CHOICES)
     color_token = models.CharField(
         max_length=20, default="brand-500", choices=POCKET_COLOR_CHOICES
@@ -81,6 +99,23 @@ class Pocket(models.Model):
                 fields=["owner"],
                 condition=Q(is_main=True),
                 name="pocket_one_main_per_owner",
+            ),
+            CheckConstraint(
+                condition=(
+                    Q(kind=POCKET_KIND_CASH, statement_day__isnull=True, due_day__isnull=True)
+                    | Q(
+                        kind=POCKET_KIND_CREDIT,
+                        statement_day__gte=1,
+                        statement_day__lte=28,
+                        due_day__gte=1,
+                        due_day__lte=28,
+                    )
+                ),
+                name="pocket_credit_cycle_days",
+            ),
+            CheckConstraint(
+                condition=Q(is_main=False) | Q(kind=POCKET_KIND_CASH),
+                name="pocket_main_is_cash",
             ),
         ]
 

@@ -29,26 +29,61 @@
         {% if pocket.notes %}
           <p class="text-sm text-brand-600 mt-1">{{ pocket.notes }}</p>
         {% endif %}
-        {% balance_key "pocket" pocket.id "own" as own_key %}
-        {% balance_key "pocket" pocket.id "downstream" as downstream_key %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
-          <div class="min-w-0">
-            <div class="text-[11px] uppercase tracking-wider text-brand-600">This pocket</div>
-            <div class="mt-0.5">
-              {% include "partials/balance.html" with amount=own_balance key=own_key text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+        {% if is_credit %}
+          {% balance_key "pocket" pocket.id "outstanding" as outstanding_key %}
+          {% balance_key "pocket" pocket.id "cycle" as cycle_key %}
+          {% balance_key "pocket" pocket.id "bill" as bill_key %}
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
+            <div class="min-w-0">
+              <div class="text-[11px] uppercase tracking-wider text-brand-600">Outstanding</div>
+              <div class="mt-0.5">
+                {% include "partials/balance.html" with amount=cycle.outstanding key=outstanding_key text_class="text-xl md:text-2xl font-semibold text-expense" %}
+              </div>
+            </div>
+            <div class="min-w-0">
+              <div class="text-[11px] uppercase tracking-wider text-brand-600">This cycle</div>
+              <div class="mt-0.5">
+                {% include "partials/balance.html" with amount=cycle.cycle_spend key=cycle_key text_class="text-xl md:text-2xl font-semibold text-brand-700" %}
+              </div>
+            </div>
+            <div class="min-w-0">
+              <div class="text-[11px] uppercase tracking-wider text-brand-600">Bill due</div>
+              <div class="mt-0.5">
+                {% include "partials/balance.html" with amount=cycle.pending_bill key=bill_key text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+              </div>
+              <div class="text-xs text-brand-600 mt-0.5">
+                {{ cycle.due_on|date:"d M Y" }} · in {{ cycle.days_until_due }}d
+              </div>
             </div>
           </div>
-          <div class="min-w-0">
-            <div class="text-[11px] uppercase tracking-wider text-brand-600">Downstream total</div>
-            <div class="mt-0.5">
-              {% include "partials/balance.html" with amount=downstream_balance key=downstream_key text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+        {% else %}
+          {% balance_key "pocket" pocket.id "own" as own_key %}
+          {% balance_key "pocket" pocket.id "downstream" as downstream_key %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
+            <div class="min-w-0">
+              <div class="text-[11px] uppercase tracking-wider text-brand-600">This pocket</div>
+              <div class="mt-0.5">
+                {% include "partials/balance.html" with amount=own_balance key=own_key text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+              </div>
+            </div>
+            <div class="min-w-0">
+              <div class="text-[11px] uppercase tracking-wider text-brand-600">Downstream total</div>
+              <div class="mt-0.5">
+                {% include "partials/balance.html" with amount=downstream_balance key=downstream_key text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+              </div>
             </div>
           </div>
-        </div>
+        {% endif %}
       </div>
     </div>
 
     <div class="flex flex-wrap gap-2 mt-5">
+      {% if is_credit and cycle.pending_bill %}
+        <a href="{% url 'transfers:new' %}?to={{ pocket.id }}&amount={{ cycle.pending_bill }}"
+           class="btn-primary">
+          <i data-lucide="banknote" class="icon"></i> Pay bill
+        </a>
+      {% endif %}
       {% if pocket.owner_id == user.id %}
         <a href="{% url 'pockets:edit' pocket.id %}" class="btn-secondary">
           <i data-lucide="pencil" class="icon"></i> Edit
@@ -71,6 +106,7 @@
     </div>
   </div>
 
+  {% if not is_credit %}
   <div class="card p-5 md:p-6 mb-5">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-base font-semibold text-brand-900">Sub-pockets</h2>
@@ -97,6 +133,7 @@
       <p class="text-sm text-brand-600">No sub-pockets yet.</p>
     {% endif %}
   </div>
+  {% endif %}
 
   {% include "pockets/_detail_charts.html" %}
 

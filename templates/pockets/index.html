@@ -66,6 +66,27 @@
     </div>
   {% endif %}
 
+  {% if card_rows or shared_card_groups %}
+    <h2 class="text-sm font-semibold text-brand-700 uppercase tracking-wide mt-8 mb-3">Cards</h2>
+    {% if card_rows %}
+      <ul class="card divide-y divide-brand-100 overflow-hidden">
+        {% for row in card_rows %}
+          {% include "pockets/_card_row.html" with row=row %}
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% for group in shared_card_groups %}
+      <div class="mt-4">
+        <div class="text-xs text-brand-600 mb-2">From {{ group.owner.profile.label }}</div>
+        <ul class="card divide-y divide-brand-100 overflow-hidden">
+          {% for row in group.rows %}
+            {% include "pockets/_card_row.html" with row=row %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+  {% endif %}
+
   {% if shared_groups %}
     <h2 class="text-sm font-semibold text-brand-700 uppercase tracking-wide mt-8 mb-3">Shared with you</h2>
     {% for group in shared_groups %}

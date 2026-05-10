@@ -34,15 +34,43 @@
   {% endif %}
 
   <section class="grid gap-3 md:gap-4 md:grid-cols-3 mb-6">
+    {% if has_cards %}
+      <div class="card p-5 md:col-span-3">
+        <div class="grid grid-cols-3 gap-4">
+          <div class="min-w-0">
+            <div class="text-xs uppercase tracking-wider text-brand-600">Cash</div>
+            <div class="mt-2">
+              {% include "partials/balance.html" with amount=cash_total key="dashboard:cash" text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+            </div>
+          </div>
+          <div class="min-w-0">
+            <div class="text-xs uppercase tracking-wider text-brand-600">Owed</div>
+            <div class="mt-2">
+              {% include "partials/balance.html" with amount=owed_total key="dashboard:owed" text_class="text-xl md:text-2xl font-semibold text-expense" %}
+            </div>
+          </div>
+          <div class="min-w-0">
+            <div class="text-xs uppercase tracking-wider text-brand-600">Net</div>
+            <div class="mt-2">
+              {% include "partials/balance.html" with amount=net_total key="dashboard:net" text_class="text-xl md:text-2xl font-semibold text-brand-900" %}
+            </div>
+          </div>
+        </div>
+        <div class="text-xs text-brand-600 mt-3">
+          {{ own_count }} own pocket{{ own_count|pluralize }}{% if shared_count %} · {{ shared_count }} shared{% endif %} · Net = Cash − Owed
+        </div>
+      </div>
+    {% else %}
     <div class="card p-5">
       <div class="text-xs uppercase tracking-wider text-brand-600">Total balance</div>
       <div class="mt-2">
-        {% include "partials/balance.html" with amount=total_balance key="dashboard:total" text_class="text-2xl md:text-3xl font-semibold text-brand-900" %}
+        {% include "partials/balance.html" with amount=net_total key="dashboard:total" text_class="text-2xl md:text-3xl font-semibold text-brand-900" %}
       </div>
       <div class="text-xs text-brand-600 mt-1">
         {{ own_count }} own pocket{{ own_count|pluralize }}{% if shared_count %} · {{ shared_count }} shared{% endif %}
       </div>
     </div>
+    {% endif %}
     <div class="card p-5">
       <div class="text-xs uppercase tracking-wider text-brand-600">{{ month_label }} · income</div>
       <div class="mt-2 text-2xl md:text-3xl font-semibold text-income num">{{ income_total|rupiah }}</div>

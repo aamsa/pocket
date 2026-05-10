@@ -17,6 +17,7 @@ from apps.transactions.models import Transaction, Transfer
 
 from .forms import PocketForm, ShareInviteForm
 from .models import (
+    POCKET_KIND_CREDIT,
     SHARE_STATUS_ACCEPTED,
     SHARE_STATUS_DECLINED,
     SHARE_STATUS_PENDING,
@@ -25,40 +26,60 @@ from .models import (
     PocketShare,
 )
 from .permissions import can_manage, can_view, require_pocket_permission
-from .services import balance_for, shared_pocket_groups, user_pocket_tree
+from .services import balance_for, card_cycle, shared_pocket_groups, user_pocket_tree
 
 POCKET_RECENT_LIMIT = 10
 POCKET_DETAIL_RANGES = (7, 14, 30)
 POCKET_DETAIL_DEFAULT_RANGE = 30
 
 
+def _card_row(pocket, *, permission=None):
+    return {
+        "pocket": pocket,
+        "permission": permission,
+        "balance": balance_for(pocket),
+        "cycle": card_cycle(pocket),
+    }
+
+
 @login_required
 def index(request):
-    rows = user_pocket_tree(request.user)
-    enriched = [
-        {
-            "pocket": p,
-            "depth": depth,
-            "balance": balance_for(p, include_descendants=True),
-        }
-        for p, depth in rows
-    ]
-    shared_groups = []
+    cash_rows = []
+    card_rows = []
+    for p, depth in user_pocket_tree(request.user):
+        if p.kind == POCKET_KIND_CREDIT:
+            card_rows.append(_card_row(p))
+        else:
+            cash_rows.append(
+                {
+                    "pocket": p,
+                    "depth": depth,
+                    "balance": balance_for(p, include_descendants=True),
+                }
+            )
+
+    shared_cash_groups = []
+    shared_card_groups = []
     for group in shared_pocket_groups(request.user):
-        shared_groups.append(
-            {
-                "owner": group["owner"],
-                "rows": [
+        cash = []
+        cards = []
+        for p, depth, permission in group["rows"]:
+            if p.kind == POCKET_KIND_CREDIT:
+                cards.append(_card_row(p, permission=permission))
+            else:
+                cash.append(
                     {
                         "pocket": p,
                         "depth": depth,
                         "permission": permission,
                         "balance": balance_for(p, include_descendants=True),
                     }
-                    for p, depth, permission in group["rows"]
-                ],
-            }
-        )
+                )
+        if cash:
+            shared_cash_groups.append({"owner": group["owner"], "rows": cash})
+        if cards:
+            shared_card_groups.append({"owner": group["owner"], "rows": cards})
+
     pending_count = PocketShare.objects.filter(
         shared_with=request.user, status=SHARE_STATUS_PENDING
     ).count()
@@ -66,8 +87,10 @@ def index(request):
         request,
         "pockets/index.html",
         {
-            "rows": enriched,
-            "shared_groups": shared_groups,
+            "rows": cash_rows,
+            "card_rows": card_rows,
+            "shared_groups": shared_cash_groups,
+            "shared_card_groups": shared_card_groups,
             "pending_invite_count": pending_count,
         },
     )
@@ -126,9 +149,13 @@ def detail(request, pocket):
             },
         )
 
-    children = list(pocket.children.all().active())
+    is_credit = pocket.kind == POCKET_KIND_CREDIT
+    cycle = card_cycle(pocket) if is_credit else None
+    children = [] if is_credit else list(pocket.children.all().active())
     own_balance = balance_for(pocket, include_descendants=False)
-    downstream_balance = balance_for(pocket, include_descendants=True)
+    downstream_balance = (
+        None if is_credit else balance_for(pocket, include_descendants=True)
+    )
 
     txn_qs = (
         Transaction.objects.filter(pocket=pocket)
@@ -156,6 +183,8 @@ def detail(request, pocket):
         "pockets/detail.html",
         {
             "pocket": pocket,
+            "is_credit": is_credit,
+            "cycle": cycle,
             "children": children,
             "own_balance": own_balance,
             "downstream_balance": downstream_balance,

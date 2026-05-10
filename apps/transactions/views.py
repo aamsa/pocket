@@ -154,6 +154,10 @@ def transfer_new(request):
         initial = {}
         if request.GET.get("from"):
             initial["from_pocket"] = request.GET["from"]
+        if request.GET.get("to"):
+            initial["to_pocket"] = request.GET["to"]
+        if request.GET.get("amount"):
+            initial["amount"] = request.GET["amount"]
         form = TransferForm(user=request.user, initial=initial)
     return render(request, "transfers/form.html", {"form": form, "mode": "new"})
 

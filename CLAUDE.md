@@ -32,7 +32,7 @@ The project's recommended skills are pinned in `skills-lock.json` (committed). T
 ```
 config/settings/{base,dev,prod}.py     dev defaults to settings.dev via manage.py
 apps/accounts/                         auth, UserProfile, force-password-change, mgmt commands
-apps/pockets/                          Pocket tree, PocketShare, permissions
+apps/pockets/                          Pocket tree (cash + credit), PocketShare, permissions, card-cycle helpers
 apps/transactions/                     Category, Transaction, Transfer
 apps/reports/                          period filter + ApexCharts data builders
 apps/core/                             dashboard, money template tags (rupiah, balance_key), context processors
@@ -83,6 +83,7 @@ python manage.py setpassword <username>
 - **One Main pocket per user**, enforced by a partial unique index. The post-User-creation signal in `apps.pockets.signals` bootstraps it.
 - **Forms get a `user=` kwarg** so they can scope querysets and stamp `created_by`. Don't read `request.user` inside a form.
 - **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function.
+- **Credit-card pockets.** A `Pocket` row with `kind="credit"` represents a credit card. Required extra fields: `statement_day` (1–28) and `due_day` (1–28). `parent` must be NULL and `is_main` must be False (CheckConstraints enforce this; the form validates earlier). Spending lands on the card as a normal expense Transaction; balance goes negative as debt accrues. Repaying is a Transfer from a cash pocket → the card. The view layer should call `apps.pockets.services.card_cycle(card)` to get the snapshot — `outstanding`, `cycle_spend`, `pending_bill`, `due_on`, `days_until_due`. The Pockets list keeps cash pockets in the existing tree and renders credit cards in a separate flat **Cards** section. Dashboard headline shows Cash / Owed / Net when the user has at least one card; otherwise it stays as the single-figure Total balance.
 - **ApexCharts**: build the full options dict server-side (in `apps/reports/services.py`), pass through `json_script`, hydrate in `static/js/app.js` on `htmx:afterSwap` so charts re-render cleanly through swaps. Add `_format: "rupiah"` to apply the IDR axis/tooltip formatter.
 - **Dynamic Tailwind classes** like `bg-{{ pocket.color_token }}` need to appear in the `@source inline(...)` safelist in `input.css` since the scanner can't see them.
 - **Balance figures** — strictly *balance* totals — should be rendered through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace.

@@ -1,10 +1,14 @@
 """Pocket-related queries that span apps. Keep view-layer code thin."""
 
+import calendar
+from dataclasses import dataclass
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 
 from .models import (
+    POCKET_KIND_CREDIT,
     SHARE_STATUS_ACCEPTED,
     Pocket,
     PocketShare,
@@ -109,3 +113,90 @@ def models_sum(field):
     from django.db.models import Sum
 
     return Sum(field)
+
+
+# ---------------------------------------------------------------------------
+# Credit-card cycle helpers
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class CardCycle:
+    outstanding: Decimal       # total currently owed (≥ 0)
+    cycle_spend: Decimal       # expenses in the current (open) cycle
+    pending_bill: Decimal      # closed-statement amount still due
+    cycle_start: date          # day after the previous statement close
+    due_on: date               # next due date
+    days_until_due: int
+
+
+def _clamp_day_to_month(year: int, month: int, day: int) -> date:
+    last = calendar.monthrange(year, month)[1]
+    return date(year, month, min(day, last))
+
+
+def _shift_month(d: date, delta: int) -> tuple[int, int]:
+    total = d.month - 1 + delta
+    return d.year + total // 12, total % 12 + 1
+
+
+def previous_statement_close(card: Pocket, today: date) -> date:
+    """Most recent date `<= today` where day == card.statement_day.
+
+    Statement_day is constrained to 1..28 in the model so month-day clamping
+    isn't strictly necessary, but the helper handles it defensively.
+    """
+    if today.day >= card.statement_day:
+        return _clamp_day_to_month(today.year, today.month, card.statement_day)
+    year, month = _shift_month(today, -1)
+    return _clamp_day_to_month(year, month, card.statement_day)
+
+
+def next_due_date(card: Pocket, today: date) -> date:
+    """Next date strictly after `today` where day == card.due_day."""
+    if today.day < card.due_day:
+        candidate = _clamp_day_to_month(today.year, today.month, card.due_day)
+        if candidate > today:
+            return candidate
+    year, month = _shift_month(today, 1)
+    return _clamp_day_to_month(year, month, card.due_day)
+
+
+def card_cycle(card: Pocket, today: date | None = None) -> CardCycle:
+    """Compute the active cycle snapshot for a credit-card pocket."""
+    from apps.transactions.models import Transaction
+
+    if card.kind != POCKET_KIND_CREDIT:
+        raise ValueError("card_cycle requires a credit-kind pocket")
+
+    today = today or date.today()
+    last_close = previous_statement_close(card, today)
+    cycle_start = last_close + timedelta(days=1)
+
+    cycle_spend = (
+        Transaction.objects.filter(
+            pocket=card, kind="expense", occurred_on__gte=cycle_start, occurred_on__lte=today
+        )
+        .aggregate(s=models_sum("amount"))["s"]
+        or 0
+    )
+    cycle_spend = Decimal(cycle_spend)
+
+    outstanding_signed = -balance_for(card)
+    outstanding = max(Decimal("0"), outstanding_signed)
+
+    # Whatever was accrued before the current cycle started, minus payments —
+    # i.e. the closed statement that the user must pay next.
+    pending_bill = max(Decimal("0"), outstanding - cycle_spend)
+
+    due_on = next_due_date(card, today)
+    days_until_due = (due_on - today).days
+
+    return CardCycle(
+        outstanding=outstanding,
+        cycle_spend=cycle_spend,
+        pending_bill=pending_bill,
+        cycle_start=cycle_start,
+        due_on=due_on,
+        days_until_due=days_until_due,
+    )
