@@ -30,6 +30,11 @@
     </form>
 
     <nav class="card p-2 mb-4 flex flex-col">
+      <a href="{% url 'transactions:index' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 text-sm">
+        <i data-lucide="arrow-left-right" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">All transactions</span>
+        <i data-lucide="chevron-right" class="icon text-brand-500"></i>
+      </a>
       <a href="{% url 'transactions:categories' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 text-sm">
         <i data-lucide="tag" class="icon text-brand-600"></i>
         <span class="flex-1 text-brand-900">Categories</span>
