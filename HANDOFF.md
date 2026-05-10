@@ -6,7 +6,7 @@ This is the "you're picking the project up after a long break" document. It tell
 
 1. **PRODUCT.md** — strategic. Who Pocket is for, brand personality, anti-references, the five design principles (especially "Money is private; reveal is deliberate" — that's the central UX primitive).
 2. **DESIGN.md** — visual. Cream-to-mocha palette, Inter type system, two-shadow elevation, component spec. The frontmatter is normative; the prose contextualizes.
-3. **CLAUDE.md** — operating manual for working in the repo (conventions, motion tokens, balance partial scope, recurring-rule contract).
+3. **CLAUDE.md** — operating manual for working in the repo (conventions, motion tokens, balance partial scope).
 4. **README.md** — features list + dev setup.
 5. **DEPLOY.md** — production runbook for `pocket.ionyx.org`.
 
@@ -46,24 +46,11 @@ Polish:
 - `templates/pockets/detail.html` "Per-pocket transactions are coming." placeholder copy softened (later replaced entirely in Pass 3).
 - Eye curtain extended to the Reports → Pocket balances chart via a `.chart-mask` overlay that mirrors `balance.html`'s idiom (chart always renders into the DOM so ApexCharts can measure it; the overlay covers it when hidden).
 
-### Pass 3 — Scheduled income/expense + Projection dashboard
+### Pass 3 — Per-pocket activity
 
-Three connected features:
+**Per-pocket activity** on the Pocket detail page replaces the placeholder. Builds `rows` in `apps/pockets/views.py::detail` using the same merge-Transactions-and-Transfers logic as `apps/transactions/views.py::index`. Filter dropdown on the Transactions page also fixed to include shared pockets, not just owned.
 
-1. **Per-pocket activity** on the Pocket detail page replaces the placeholder. Builds `rows` in `apps/pockets/views.py::detail` using the same merge-Transactions-and-Transfers logic as `apps/transactions/views.py::index`. Filter dropdown on the Transactions page also fixed to include shared pockets, not just owned.
-
-2. **Recurring rules**. New `RecurringRule` model in `apps/transactions/models.py` (kind / pocket / category / amount / frequency / interval / start_date / end_date / occurrences / is_active). New FK on `Transaction.recurring_rule` (`SET_NULL`). Materialiser at `apps/transactions/recurring.py`:
-   - `compute_occurrences(...)` — pure date math; handles end-of-month clamping (`Jan 31 + 1mo = Feb 28/29`) and leap-day clamping; capped at `occurrences` or 1000.
-   - `materialize(rule, from_date=None)` — idempotent `get_or_create` per occurrence date.
-   - `clear_future(rule, from_date=None)` — used before re-materialisation on edit and on pause.
-   - CRUD UI at `/transactions/recurring/` (list / new / edit / delete / pause+resume), entry points on the Transactions page header, sidebar Quick Add, and the Settings nav.
-
-3. **Projection dashboard** at `/projections/`. New `apps/projections/` Django app. Charts:
-   - **Balance trajectory** — per-pocket area chart, daily buckets for 3-month / monthly for 6/12-month horizons. Eye curtain via `.chart-mask` (same as Reports).
-   - **Projected income vs expense** — monthly bar chart.
-   - **Active schedules in scope** — table with cadence label, next occurrence, monthly equivalent.
-
-   Math reuses `apps/reports/services.py::_running_balance_at` and the existing chart constants. No virtual-future math anywhere — recurring rules pre-create real `Transaction` rows on their occurrence dates, so projecting is just `_running_balance_at(pocket, future_date)`.
+> Earlier work in this pass also built **Scheduled income/expense (RecurringRule)** and a **Projection dashboard** at `/projections/`. Both were removed in a later cleanup — see "Pass 6 — Removed scheduled & projection features" below.
 
 ### Pass 4 — Bug bash from real-device screenshots
 
@@ -73,9 +60,9 @@ The user reported six concrete issues from screenshots on a real iPhone. All fix
 | --- | --- | --- |
 | 1 | Page-header `+` button overflowing right edge | All `flex items-end justify-between` headers got `min-w-0 flex-1` on text + `shrink-0` on actions |
 | 2 | "Recent activity" rows showing `S…` for category names | Restructured rows: name on line 1, chips/meta on line 2 |
-| 3 | Total Balance showing `Rp 454.750.000` (12 future salaries inflating it) instead of realised `Rp 4.750.000` | `apps/pockets/services.py::balance_for` now defaults `as_of=date.today()` |
+| 3 | Total Balance showing `Rp 454.750.000` (12 future salaries inflating it) instead of realised `Rp 4.750.000` | At the time, `balance_for` was made to default `as_of=date.today()` to clip future-dated rule rows. Now obsolete after Pass 6 removed the scheduled feature; the default is again all-time. |
 | 4 | Bottom-tab bar reading as a floating chip | Switched from `bg-brand-50/95 backdrop-blur` to opaque cream + `shadow-[0_-4px_16px_-8px_rgb(88_49_1_/_0.12)]`. Bumped `<main>` bottom padding to `calc(env(safe-area-inset-bottom)+6.5rem)` |
-| 5 | Projections monthly chart wider than card | Added `chart.width: '100%'`, `xaxis.labels.rotate: -45`, `hideOverlappingLabels: true`. Plus `overflow-hidden` on the card. |
+| 5 | Projections monthly chart wider than card | (Mooted — Projections removed in Pass 6.) |
 | 6 | "M…" truncated wallet name | Same row restructure as #2 — name gets full line 1, chips drop to line 2 |
 
 Plus pre-emptive fixes from a separate overflow audit: `.depth-row` utility for nested-pocket indent (smaller step on mobile), filter-form reflow on narrow viewports, `<main>` got `overflow-x-clip` as a safety net, breadcrumb wraps with truncated ancestor links, pocket-detail balance grid stacks to 1-col below sm.
@@ -83,6 +70,16 @@ Plus pre-emptive fixes from a separate overflow audit: `.depth-row` utility for 
 ### Pass 5 — Production deployment
 
 Brought `pocket.ionyx.org` up on the existing droplet alongside `ionyx`, `n8n`, and `sablonmechanics-v2`. Followed the sablonmechanics-v2 pattern (Linux user `pocket`, code at `/home/pocket/apps/pocket`, env at `/etc/pocket.env`, Gunicorn on `127.0.0.1:8002`, Nginx + snakeoil cert + Cloudflare Full mode, Postgres 16). See **DEPLOY.md** for the runbook.
+
+### Pass 6 — Removed scheduled & projection features
+
+Per user request, the **`RecurringRule`** model + materialiser and the **`/projections/`** dashboard were both removed:
+
+- Deleted `apps/projections/` and `templates/projections/`, plus `templates/recurring/`, `apps/transactions/recurring.py`, and the `RecurringRule` model.
+- Hard-deleted every `Transaction` row generated by a rule (past and future), then dropped `Transaction.recurring_rule` and the `RecurringRule` table — see migration `apps/transactions/migrations/0003_remove_recurring.py`.
+- Stripped sidebar / settings / transactions-page nav entries, the `show_planned` filter, and the "Planned" chip on `_list.html`.
+- Reverted the past-only-by-default filtering on Dashboard aggregates / latest list / Transactions index, and dropped the `as_of=date.today()` default on `balance_for`.
+- The `_running_balance_at` helper in `apps/reports/services.py` was kept — Reports' own pocket-balances chart still uses it.
 
 ## What's deferred (still not built)
 
@@ -96,22 +93,16 @@ Brought `pocket.ionyx.org` up on the existing droplet alongside `ionyx`, `n8n`, 
 
 1. **Eye toggle / chart-mask system.** `templates/partials/balance.html` keeps its Alpine state inlined (not registered via `Alpine.data()`) after a stale-cache incident on iOS Safari. The `.chart-mask` sister system in `static/css/input.css` and the `pocket-balance-vis:` localStorage namespace are the same primitive. Documented in CLAUDE.md.
 
-2. **Past-only by default.** Once recurring rules ship, future-dated `Transaction` rows exist in the DB. The Dashboard latest list, monthly aggregates, Total Balance, and the default Transactions list filter `occurred_on__lte=today`. Reports keep period-bounded semantics (`period.end` caps). The Projections dashboard is the explicit forward-looking surface. Documented in CLAUDE.md.
+2. **Motion conventions.** Easing tokens (`--ease-snap`, `--ease-glide`) and the focus-visible/focus split are documented in CLAUDE.md. Don't introduce one-off cubic-beziers; extend the token set.
 
-3. **`balance_for(as_of=None) defaults to date.today()`.** Callers that genuinely want a forward-looking projected balance must pass `as_of=date.max`. This is what makes the Total Balance card display realised, not all-time-including-future.
+3. **No Django admin.** The default `django.contrib.admin` is intentionally absent from `INSTALLED_APPS`. All operations are CLI commands or custom pages. Don't add the admin back without thinking through the design implications.
 
-4. **`Transaction.recurring_rule` is `SET_NULL`, not `CASCADE`.** Past actuals materialised from a rule survive deletion of the rule. This means `rule.delete()` orphans past Transactions (good). On edit, the views call `clear_future(rule)` first then `materialize(rule, from_date=date.today())` — so future rows get re-planned but past rows are untouched.
-
-5. **Motion conventions.** Easing tokens (`--ease-snap`, `--ease-glide`) and the focus-visible/focus split are documented in CLAUDE.md. Don't introduce one-off cubic-beziers; extend the token set.
-
-6. **No Django admin.** The default `django.contrib.admin` is intentionally absent from `INSTALLED_APPS`. All operations are CLI commands or custom pages. Don't add the admin back without thinking through the design implications.
-
-7. **No public registration.** Accounts are seeded via `python manage.py createuser` and gated by the auth middleware. There is no `/register` route — by design.
+4. **No public registration.** Accounts are seeded via `python manage.py createuser` and gated by the auth middleware. There is no `/register` route — by design.
 
 ## Operational notes
 
 - **Backups**: not yet configured. The droplet has DigitalOcean's snapshot facility, but Pocket-specific Postgres dumps aren't running on a schedule. Before relying on this for real money, set up a daily `pg_dump pocket` cron and copy off-droplet (e.g., to Backblaze or to a Tailscale-reachable NAS).
-- **Migrations**: every new schema change should ship behind a migration. The materialiser in `apps/transactions/recurring.py` is idempotent so running `migrate` twice is safe.
+- **Migrations**: every new schema change should ship behind a migration.
 - **Static asset cache busting**: `STATIC_VERSION` in `/etc/pocket.env` is a unix timestamp the templates append to `output.css` and `app.js`. Bump it after a CSS / JS deploy and `systemctl restart pocket`.
 - **Cloudflare SSL mode**: must stay on **Full** (not Full Strict). Origin uses snakeoil; Full Strict would refuse the connection.
 - **Logs**: `journalctl -u pocket` is the gunicorn log (access + error). Nginx access goes to `/var/log/nginx/access.log` (all vhosts mixed; grep for `pocket.ionyx.org`).
@@ -130,4 +121,4 @@ If picking this up, in order of leverage:
 2. **Archive-restore UI for pockets.** Closes the "model supports it but no view" loop; small surface.
 3. **CSV import.** Lets the user migrate any pre-existing spreadsheet data.
 4. **Per-pocket transaction filtering** on the detail page (period picker on the activity card).
-5. **Tests.** No automated tests yet. The verification flow in README.md is manual; first targets for `pytest` would be the recurring materialiser (pure date math) and the `balance_for` semantics.
+5. **Tests.** No automated tests yet. The verification flow in README.md is manual; first targets for `pytest` would be the `balance_for` semantics and the period-filter logic in `apps/reports/services.py`.

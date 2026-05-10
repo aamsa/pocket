@@ -29,7 +29,6 @@ INSTALLED_APPS = [
     "apps.pockets",
     "apps.transactions",
     "apps.reports",
-    "apps.projections",
     "apps.core",
 ]
 

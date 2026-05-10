@@ -15,10 +15,8 @@ def _manageable_pockets(user):
 
 from .models import (
     CATEGORY_KIND_INCOME,
-    FREQUENCY_CHOICES,
     TXN_KIND_CHOICES,
     Category,
-    RecurringRule,
     Transaction,
     Transfer,
 )
@@ -156,90 +154,6 @@ class TransferForm(forms.ModelForm):
         return obj
 
 
-class RecurringRuleForm(forms.ModelForm):
-    amount = forms.DecimalField(
-        max_digits=14,
-        decimal_places=0,
-        min_value=1,
-        widget=forms.NumberInput(
-            attrs={"class": input_class, "inputmode": "numeric", "placeholder": "0"}
-        ),
-    )
-    interval = forms.IntegerField(
-        min_value=1,
-        initial=1,
-        widget=forms.NumberInput(attrs={"class": input_class, "inputmode": "numeric"}),
-    )
-    occurrences = forms.IntegerField(
-        required=False,
-        min_value=1,
-        widget=forms.NumberInput(
-            attrs={"class": input_class, "inputmode": "numeric", "placeholder": "Leave blank to use End date"}
-        ),
-        help_text="How many times this should repeat. Leave blank to use End date instead.",
-    )
-
-    class Meta:
-        model = RecurringRule
-        fields = [
-            "kind",
-            "pocket",
-            "category",
-            "amount",
-            "frequency",
-            "interval",
-            "start_date",
-            "end_date",
-            "occurrences",
-            "notes",
-        ]
-        widgets = {
-            "kind": forms.Select(attrs={"class": input_class}),
-            "pocket": forms.Select(attrs={"class": input_class}),
-            "category": forms.Select(attrs={"class": input_class}),
-            "frequency": forms.Select(attrs={"class": input_class}),
-            "start_date": forms.DateInput(attrs={"class": input_class, "type": "date"}),
-            "end_date": forms.DateInput(attrs={"class": input_class, "type": "date"}),
-            "notes": forms.TextInput(
-                attrs={"class": input_class, "placeholder": "Optional"}
-            ),
-        }
-
-    def __init__(self, *args, user=None, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
-        if not self.is_bound and not self.initial.get("start_date"):
-            self.initial["start_date"] = date.today().isoformat()
-        if user is not None:
-            self.fields["pocket"].queryset = _manageable_pockets(user)
-            self.fields["category"].queryset = Category.objects.for_user(user).active()
-
-    def clean(self):
-        cleaned = super().clean()
-        end_date = cleaned.get("end_date")
-        occurrences = cleaned.get("occurrences")
-        if not end_date and not occurrences:
-            raise forms.ValidationError(
-                "Set an end date or a number of occurrences so the schedule has a stopping point."
-            )
-        start = cleaned.get("start_date")
-        if start and end_date and end_date < start:
-            self.add_error("end_date", "End date must be on or after the start date.")
-        kind = cleaned.get("kind")
-        category = cleaned.get("category")
-        if kind and category and category.kind != kind:
-            self.add_error("category", f"Category does not match the {kind} kind.")
-        return cleaned
-
-    def save(self, commit=True):
-        obj = super().save(commit=False)
-        if obj.created_by_id is None:
-            obj.created_by = self.user
-        if commit:
-            obj.save()
-        return obj
-
-
 class TransactionFilterForm(forms.Form):
     start = forms.DateField(required=False, widget=forms.DateInput(attrs={"class": input_class, "type": "date"}))
     end = forms.DateField(required=False, widget=forms.DateInput(attrs={"class": input_class, "type": "date"}))
@@ -259,11 +173,6 @@ class TransactionFilterForm(forms.Form):
         queryset=Category.objects.none(),
         empty_label="All categories",
         widget=forms.Select(attrs={"class": input_class}),
-    )
-    show_planned = forms.BooleanField(
-        required=False,
-        label="Show planned",
-        widget=forms.CheckboxInput(attrs={"class": "w-4 h-4 rounded border-brand-300 text-brand-700 focus:ring-brand-300/40"}),
     )
 
     def __init__(self, *args, user=None, **kwargs):

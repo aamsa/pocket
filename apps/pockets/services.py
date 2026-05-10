@@ -1,6 +1,5 @@
 """Pocket-related queries that span apps. Keep view-layer code thin."""
 
-from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -73,20 +72,11 @@ def shared_pocket_groups(user):
 
 
 def balance_for(pocket, *, include_descendants=False, as_of=None):
-    """Computed balance for a pocket as of a point in time.
-
-    `as_of` defaults to today, so future-dated Transactions materialised by a
-    RecurringRule do NOT inflate the realised balance. Callers that need a
-    forward-looking projected balance should pass `as_of=date.max` or a
-    specific future date.
-    """
+    """Computed balance for a pocket. Optional `as_of` caps the date window."""
     try:
         from apps.transactions.models import Transaction, Transfer  # noqa: F401
     except ImportError:
         return Decimal("0")
-
-    if as_of is None:
-        as_of = date.today()
 
     pocket_ids = (
         pocket.descendant_ids_with_self() if include_descendants else [pocket.id]
@@ -102,9 +92,10 @@ def balance_for(pocket, *, include_descendants=False, as_of=None):
         transfer_in_qs = transfer_in_qs.exclude(from_pocket_id__in=pocket_ids)
         transfer_out_qs = transfer_out_qs.exclude(to_pocket_id__in=pocket_ids)
 
-    txn_qs = txn_qs.filter(occurred_on__lte=as_of)
-    transfer_in_qs = transfer_in_qs.filter(occurred_on__lte=as_of)
-    transfer_out_qs = transfer_out_qs.filter(occurred_on__lte=as_of)
+    if as_of is not None:
+        txn_qs = txn_qs.filter(occurred_on__lte=as_of)
+        transfer_in_qs = transfer_in_qs.filter(occurred_on__lte=as_of)
+        transfer_out_qs = transfer_out_qs.filter(occurred_on__lte=as_of)
 
     income = txn_qs.filter(kind="income").aggregate(s=models_sum("amount"))["s"] or 0
     expense = txn_qs.filter(kind="expense").aggregate(s=models_sum("amount"))["s"] or 0

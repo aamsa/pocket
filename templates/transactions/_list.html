@@ -1,31 +1,27 @@
 {% load money %}
 
 {% if rows %}
-  {% now "Y-m-d" as today_iso %}
   <ul class="card divide-y divide-brand-100 overflow-hidden">
     {% for row in rows %}
       {% if row.type == 'txn' %}
         {% with t=row.obj %}
-          {% with is_planned=t.occurred_on|date:"Y-m-d" %}
-          <li class="flex items-center gap-3 px-4 py-3 {% if is_planned > today_iso %}italic{% endif %}">
+          <li class="flex items-center gap-3 px-4 py-3">
             <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
               <i data-lucide="{{ t.category.icon }}" class="icon"></i>
             </span>
             <div class="flex-1 min-w-0">
-              <div class="font-medium text-brand-900 truncate not-italic">{{ t.category.name }}</div>
+              <div class="font-medium text-brand-900 truncate">{{ t.category.name }}</div>
               <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
                 <span class="truncate">{{ t.pocket.name }} · {{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}</span>
-                {% if is_planned > today_iso %}<span class="chip shrink-0 not-italic">Planned</span>{% endif %}
               </div>
             </div>
             <div class="text-right shrink-0">
-              <div class="font-semibold num not-italic {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
+              <div class="font-semibold num {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
                 {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
               </div>
-              <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700 not-italic">Edit</a>
+              <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700">Edit</a>
             </div>
           </li>
-          {% endwith %}
         {% endwith %}
       {% else %}
         {% with tr=row.obj %}

@@ -11,9 +11,6 @@
       <p class="text-sm text-brand-600 mt-1">Filter, review, edit. The full ledger.</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
-      <a href="{% url 'transactions:recurring_index' %}" class="btn-ghost hidden md:inline-flex">
-        <i data-lucide="repeat" class="icon"></i> Scheduled
-      </a>
       <a href="{% url 'transactions:categories' %}" class="btn-ghost hidden md:inline-flex">
         <i data-lucide="tag" class="icon"></i> Categories
       </a>
@@ -51,10 +48,6 @@
         {{ form.category }}
       </label>
     </div>
-    <label class="inline-flex items-center gap-2 mt-3 cursor-pointer text-sm text-brand-700">
-      {{ form.show_planned }}
-      <span>Show planned (scheduled future entries)</span>
-    </label>
   </form>
 
   <div id="txn-list">
