@@ -157,12 +157,11 @@
 .chart-mask.chart-hidden .chart-eye-hide { display: inline-block; }
 
 /* Reduced motion: keep opacity/colour cues, kill movement.
-   Per Emil — reduce, don't remove. Comprehension stays intact. */
+   Per Emil — reduce, don't remove. Comprehension stays intact.
+   Universal `*:active` covers every active:scale-* utility in the app
+   (rows, tabs, sidebar, FAB, chart eye) without enumerating each. */
 @media (prefers-reduced-motion: reduce) {
-  .btn-primary:active,
-  .btn-secondary:active,
-  .btn-ghost:active,
-  .balance button:active { transform: none; }
+  *:active { transform: none; }
   .animate-sheet-up,
   .animate-slide-up { animation: var(--animate-fade-in); }
 }

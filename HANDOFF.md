@@ -117,6 +117,25 @@ Two related features that ship together because the cycle math is the same primi
 - **Pocket not pre-filling on edit transaction**: Stale `x-model="pocketId"` on the pocket widget from an earlier Alpine state shape; `pocketId` no longer existed in the data object after the `txnForm()` refactor, so Alpine bound the select to undefined on mount and wiped the server-rendered `selected`. Removed the stale `x-model`.
 - **More page navigation**: added an **All transactions** link above Categories on the Settings/More page.
 
+### Pass 10 — System-wide polish sweep
+
+A flagship-bar polish pass aligning every surface back to DESIGN.md after several feature passes accumulated small drifts. No new patterns introduced — only existing tokens re-applied where they belonged.
+
+- **Reduced-motion completeness** (`static/css/input.css`): replaced the enumerated `:active` reset (four button classes + `.balance button`) with a universal `*:active { transform: none; }` inside the `@media (prefers-reduced-motion: reduce)` block. Every `active:scale-*` in the app now drops its transform for reduced-motion users — pocket rows, card rows, sub-pocket rows, settings nav rows, bottom tabs, sidebar, FAB, chart-curtain eye — without enumerating each. The slide-up→fade-in entrance degradation is unchanged.
+- **Credit card row drift** (`templates/pockets/_card_row.html`): the outer `<div>` wrapping the link + Pay button had no hover state (the link itself only carried `active:scale-[.99]`). Added `hover:bg-brand-50/60 transition-[background-color] duration-150 ease-snap` to the wrapper so cards get the same warm linen wash as cash pockets. Also wrapped each rupiah figure in the `Cycle … · Committed … · Bill …` subtitle in `<span class="num">` so digits column-align per the Tabular Currency Rule.
+- **Press feedback gaps**: sub-pocket rows on `templates/pockets/detail.html:159` and the four settings nav rows on `templates/settings/profile.html` only had hover washes — no `active:scale-*`. Brought both in line with the standard nav-row pattern (`active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap`).
+- **Section-label color discipline**: four `<h2>`/`<h3>` labels coloured `text-income` / `text-expense` were sitting at borderline-AA contrast on cream and consumed semantic-color budget the Off-Palette Two Rule reserves for transaction signals. Neutralised to `text-brand-700`. The amounts and chart series in those panels still carry the sage/terracotta — that's where the semantic budget belongs. Touched: `categories/index.html:21,42`, `reports/_panels.html:88,109`.
+- **Shares-inbox Accept button** (`templates/shares/inbox.html:30`): `btn-secondary text-income` stacked semantic colour over the secondary's own `text-brand-800`, fighting both. Accept *is* the primary action on a pending-invite row, so promoted to `btn-primary`. Decline ghost (`btn-ghost text-expense hover:bg-expense/10`) stays — matches the destructive-ghost pattern from the Archive button on `pockets/detail.html:107`.
+- **Dashboard empty-state chip-as-prose** (`templates/dashboard.html:119`): `Tap <span class="chip">+</span> to add the first one` misused `.chip` (which is a static descriptor, not inline ornament). Replaced with a small `w-5 h-5 rounded-full bg-brand-700 text-brand-50` pill containing the plus icon — visually rhymes with the actual FAB the user is being asked to tap, without claiming chip semantics.
+
+What was inventoried and **intentionally not touched**:
+
+- `--ease-glide` token defined in `input.css` but unreferenced in any template. Kept as a documented on-screen-movement token even though no current surface uses it; removing it now would force a re-add the next time we add a draggable or retargeted-transition element.
+- Em dashes in template copy. The shared impeccable design law bans them; the user's DESIGN.md and PRODUCT.md voice uses them deliberately. User instructions take precedence.
+- `templates/500.html` inline brand hex. The page must render when the static CSS pipeline isn't available, so inline hex is the right call.
+- Reports `show_planned` checkbox raw styling. Component-ising as a `.checkbox` token is a separate scope.
+- Transaction-row tap-to-edit affordance. Rows are intentionally informational with a small "Edit" link in the corner; making the whole row navigable is a UX decision, not polish.
+
 ## What's deferred (still not built)
 
 - **CSV import / export.** Useful for migrating existing spreadsheet data; not blocking.

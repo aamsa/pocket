@@ -85,7 +85,7 @@
     <h2 class="text-base font-semibold text-brand-900 mb-3">Top transactions</h2>
     <div class="grid md:grid-cols-2 gap-4">
       <div>
-        <h3 class="text-xs font-medium text-income uppercase tracking-wide mb-2">Largest income</h3>
+        <h3 class="text-xs font-medium text-brand-700 uppercase tracking-wide mb-2">Largest income</h3>
         {% if top_transactions.top_income %}
           <ul class="divide-y divide-brand-100">
             {% for t in top_transactions.top_income %}
@@ -106,7 +106,7 @@
         {% endif %}
       </div>
       <div>
-        <h3 class="text-xs font-medium text-expense uppercase tracking-wide mb-2">Largest expense</h3>
+        <h3 class="text-xs font-medium text-brand-700 uppercase tracking-wide mb-2">Largest expense</h3>
         {% if top_transactions.top_expense %}
           <ul class="divide-y divide-brand-100">
             {% for t in top_transactions.top_expense %}

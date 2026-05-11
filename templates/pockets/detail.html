@@ -157,7 +157,7 @@
         {% for c in children %}
           <li>
             <a href="{% url 'pockets:detail' c.id %}"
-               class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-brand-50/70">
+               class="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-brand-50/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap">
               <span class="w-8 h-8 rounded-lg grid place-items-center text-brand-50 shrink-0 bg-{{ c.color_token }}">
                 <i data-lucide="{{ c.icon }}" class="w-4 h-4"></i>
               </span>

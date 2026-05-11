@@ -1,7 +1,7 @@
 {% load money %}
 {% with p=row.pocket c=row.cycle %}
   <li>
-    <div class="depth-row flex items-center gap-3 pr-4 py-3"
+    <div class="depth-row flex items-center gap-3 pr-4 py-3 hover:bg-brand-50/60 transition-[background-color] duration-150 ease-snap"
          style="--depth: 0">
       <a href="{% url 'pockets:detail' p.id %}"
          class="flex items-center gap-3 flex-1 min-w-0 active:scale-[.99] transition-transform duration-150 ease-snap">
@@ -16,10 +16,10 @@
             {% endif %}
           </div>
           <div class="text-xs text-brand-600 mt-0.5 truncate">
-            Cycle {{ c.cycle_spend|rupiah }}
-            {% if c.committed %} · Committed {{ c.committed|rupiah }}{% endif %}
+            Cycle <span class="num">{{ c.cycle_spend|rupiah }}</span>
+            {% if c.committed %} · Committed <span class="num">{{ c.committed|rupiah }}</span>{% endif %}
             {% if c.pending_bill %}
-              · Bill {{ c.pending_bill|rupiah }} due in {{ c.days_until_due }}d
+              · Bill <span class="num">{{ c.pending_bill|rupiah }}</span> due in {{ c.days_until_due }}d
             {% else %}
               · No bill due
             {% endif %}

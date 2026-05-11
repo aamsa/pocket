@@ -116,7 +116,11 @@
     {% else %}
       <div class="text-sm text-brand-600 py-8 text-center">
         <i data-lucide="receipt-text" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-        <p>No transactions yet. Tap <span class="chip">+</span> to add the first one.</p>
+        <p>No transactions yet. Tap
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-700 text-brand-50 align-text-bottom mx-0.5">
+            <i data-lucide="plus" class="w-3 h-3"></i>
+          </span>
+          to add the first one.</p>
       </div>
     {% endif %}
   </section>

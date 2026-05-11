@@ -27,7 +27,7 @@
             </div>
             <div class="flex items-center gap-1">
               <form method="post" action="{% url 'pockets:share_respond' s.id 'accept' %}">{% csrf_token %}
-                <button type="submit" class="btn-secondary text-income">
+                <button type="submit" class="btn-primary">
                   <i data-lucide="check" class="icon"></i> Accept
                 </button>
               </form>
