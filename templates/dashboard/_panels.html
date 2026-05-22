@@ -64,18 +64,18 @@
    One card. Stacked label→value rows on mobile (each amount gets the full
    row width, so full IDR figures never truncate); 3-up on desktop. #}
 <section class="card p-4 md:p-5 mb-4">
-  <div class="grid grid-cols-1 sm:grid-cols-3 sm:gap-4 divide-y divide-brand-100 sm:divide-y-0">
-    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
-      <span class="text-[11px] uppercase tracking-wider text-brand-600">Income</span>
-      <span class="num font-semibold text-income text-lg sm:text-2xl sm:block sm:mt-1">{{ income_total|rupiah }}</span>
+  <div class="grid grid-cols-1 lg:grid-cols-3 lg:gap-4 divide-y divide-brand-100 lg:divide-y-0">
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 lg:block lg:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600 shrink-0">Income</span>
+      <span class="num font-semibold text-income text-lg lg:text-xl lg:block lg:mt-1">{{ income_total|rupiah }}</span>
     </div>
-    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
-      <span class="text-[11px] uppercase tracking-wider text-brand-600">Expense</span>
-      <span class="num font-semibold text-expense text-lg sm:text-2xl sm:block sm:mt-1">{{ expense_total|rupiah }}</span>
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 lg:block lg:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600 shrink-0">Expense</span>
+      <span class="num font-semibold text-expense text-lg lg:text-xl lg:block lg:mt-1">{{ expense_total|rupiah }}</span>
     </div>
-    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
-      <span class="text-[11px] uppercase tracking-wider text-brand-600">Net</span>
-      <span class="num font-semibold text-lg sm:text-2xl sm:block sm:mt-1 {% if net_total >= 0 %}text-income{% else %}text-expense{% endif %}">{% if net_total >= 0 %}+{% else %}−{% endif %}{{ net_total|abs_value|rupiah }}</span>
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 lg:block lg:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600 shrink-0">Net</span>
+      <span class="num font-semibold text-lg lg:text-xl lg:block lg:mt-1 {% if net_total >= 0 %}text-income{% else %}text-expense{% endif %}">{% if net_total >= 0 %}+{% else %}−{% endif %}{{ net_total|abs_value|rupiah }}</span>
     </div>
   </div>
 </section>
