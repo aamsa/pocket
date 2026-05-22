@@ -22,7 +22,7 @@
       {% for g in goals %}
         <div class="card p-5 anim-row">
           <div class="flex items-center justify-between gap-2 mb-2">
-            <h2 class="font-semibold text-brand-900 truncate">{{ g.goal.name }}</h2>
+            <h2 class="font-semibold text-brand-900 truncate min-w-0">{{ g.goal.name }}</h2>
             <a href="{% url 'ledger:goal_edit' g.goal.id %}" class="text-xs text-brand-600 hover:text-brand-900 shrink-0">Edit</a>
           </div>
           <div class="text-sm num text-brand-600 mb-2">{{ g.current|rupiah }} <span class="text-brand-400">/ {{ g.target|rupiah }}</span></div>

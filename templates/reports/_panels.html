@@ -109,7 +109,7 @@
                   <div class="text-brand-900 truncate">{{ t.category.name }}{% if t.source %} · {{ t.source.name }}{% endif %}</div>
                   <div class="text-xs text-brand-600">{{ t.occurred_on|date:"d M Y" }}</div>
                 </div>
-                <div class="text-income num font-semibold text-sm">+{{ t.amount|rupiah }}</div>
+                <div class="text-income num font-semibold text-sm shrink-0">+{{ t.amount|rupiah }}</div>
               </li>
             {% endfor %}
           </ul>
@@ -130,7 +130,7 @@
                   <div class="text-brand-900 truncate">{{ t.category.name }}{% if t.source %} · {{ t.source.name }}{% endif %}</div>
                   <div class="text-xs text-brand-600">{{ t.occurred_on|date:"d M Y" }}</div>
                 </div>
-                <div class="text-expense num font-semibold text-sm">−{{ t.amount|rupiah }}</div>
+                <div class="text-expense num font-semibold text-sm shrink-0">−{{ t.amount|rupiah }}</div>
               </li>
             {% endfor %}
           </ul>

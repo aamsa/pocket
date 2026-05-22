@@ -34,9 +34,9 @@
             <span class="w-8 h-8 rounded-lg grid place-items-center text-brand-50 shrink-0 bg-{{ r.category.color_token }}">
               <i data-lucide="{{ r.category.icon }}" class="w-4 h-4"></i>
             </span>
-            <span class="flex-1 font-medium text-brand-900 truncate">{{ r.category.name }}</span>
-            <span class="text-sm num text-brand-600">{{ r.spent|rupiah }} / {{ r.limit|rupiah }}</span>
-            <a href="{% url 'ledger:budget_edit' r.budget.id %}" class="text-xs text-brand-600 hover:text-brand-900">Edit</a>
+            <span class="flex-1 min-w-0 font-medium text-brand-900 truncate">{{ r.category.name }}</span>
+            <span class="text-sm num text-brand-600 shrink-0">{{ r.spent|rupiah }} / {{ r.limit|rupiah }}</span>
+            <a href="{% url 'ledger:budget_edit' r.budget.id %}" class="text-xs text-brand-600 hover:text-brand-900 shrink-0">Edit</a>
           </div>
           <div class="relative h-2.5 rounded-full bg-brand-100 overflow-hidden">
             <div class="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-snap
@@ -44,11 +44,11 @@
                  style="width: {{ r.pct }}%"></div>
             <span class="absolute top-[-2px] bottom-[-2px] w-0.5 bg-brand-900/40" style="left: {{ r.time_pct }}%" title="Today's pace"></span>
           </div>
-          <div class="flex items-center justify-between text-xs mt-1.5">
-            <span class="{% if r.signal == 'over' %}text-expense{% elif r.signal == 'fast' %}text-brand-700{% else %}text-income{% endif %}">
+          <div class="flex items-center justify-between gap-3 text-xs mt-1.5">
+            <span class="truncate min-w-0 {% if r.signal == 'over' %}text-expense{% elif r.signal == 'fast' %}text-brand-700{% else %}text-income{% endif %}">
               {% if r.signal == 'over' %}Over budget{% elif r.signal == 'fast' %}Spending fast{% else %}On track{% endif %}
             </span>
-            <span class="num text-brand-600">{{ r.remaining|rupiah }} left</span>
+            <span class="num text-brand-600 shrink-0">{{ r.remaining|rupiah }} left</span>
           </div>
         </div>
       {% endfor %}

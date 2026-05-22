@@ -200,7 +200,17 @@ def income_vs_expense(period: Period, *, owner_ids, source_ids=None, category_id
             "stroke": {"show": True, "width": 1, "colors": ["transparent"]},
             "grid": {"borderColor": _GRID_COLOR, "strokeDashArray": 4},
             "legend": {"position": "top", "horizontalAlign": "right", "fontSize": "12px"},
-            "xaxis": {"categories": categories, "labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
+            "xaxis": {
+                "categories": categories,
+                "tickAmount": 8,
+                "labels": {
+                    "rotate": -45,
+                    "rotateAlways": False,
+                    "hideOverlappingLabels": True,
+                    "trim": True,
+                    "style": {"colors": _AXIS_COLOR, "fontSize": "11px"},
+                },
+            },
             "yaxis": {"labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
             "tooltip": {"theme": "light"},
             "series": [
@@ -309,7 +319,17 @@ def net_worth_over_time(period: Period, *, user_ids, series_name="Net worth"):
             "colors": [_BRAND_RAMP[0]],
             "grid": {"borderColor": _GRID_COLOR, "strokeDashArray": 4},
             "legend": {"show": False},
-            "xaxis": {"categories": labels, "labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
+            "xaxis": {
+                "categories": labels,
+                "tickAmount": 8,
+                "labels": {
+                    "rotate": -45,
+                    "rotateAlways": False,
+                    "hideOverlappingLabels": True,
+                    "trim": True,
+                    "style": {"colors": _AXIS_COLOR, "fontSize": "11px"},
+                },
+            },
             "yaxis": {"labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
             "tooltip": {"theme": "light"},
             "series": [{"name": series_name, "data": data}],

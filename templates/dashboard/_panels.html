@@ -19,7 +19,7 @@
           {% if person == 'household' %}Household net worth{% else %}Net worth{% endif %}
         </div>
         <div class="mt-1">
-          {% include "partials/balance.html" with amount=balance key="dashboard:networth" text_class="text-3xl md:text-4xl font-semibold text-brand-900" %}
+          {% include "partials/balance.html" with amount=balance key="dashboard:networth" text_class="text-2xl sm:text-3xl md:text-4xl font-semibold text-brand-900" %}
         </div>
       </div>
     </div>
@@ -60,20 +60,22 @@
   </div>
 </section>
 
-{# ---- Period income / expense / net -------------------------------------- #}
-<section class="grid grid-cols-3 gap-3 md:gap-4 mb-4">
-  <div class="card p-4">
-    <div class="text-[11px] uppercase tracking-wider text-brand-600">Income</div>
-    <div class="mt-1 text-base md:text-2xl font-semibold text-income num truncate">{{ income_total|rupiah }}</div>
-  </div>
-  <div class="card p-4">
-    <div class="text-[11px] uppercase tracking-wider text-brand-600">Expense</div>
-    <div class="mt-1 text-base md:text-2xl font-semibold text-expense num truncate">{{ expense_total|rupiah }}</div>
-  </div>
-  <div class="card p-4">
-    <div class="text-[11px] uppercase tracking-wider text-brand-600">Net</div>
-    <div class="mt-1 text-base md:text-2xl font-semibold num truncate {% if net_total >= 0 %}text-income{% else %}text-expense{% endif %}">
-      {% if net_total >= 0 %}+{% else %}−{% endif %}{{ net_total|abs_value|rupiah }}
+{# ---- Period income / expense / net --------------------------------------
+   One card. Stacked label→value rows on mobile (each amount gets the full
+   row width, so full IDR figures never truncate); 3-up on desktop. #}
+<section class="card p-4 md:p-5 mb-4">
+  <div class="grid grid-cols-1 sm:grid-cols-3 sm:gap-4 divide-y divide-brand-100 sm:divide-y-0">
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600">Income</span>
+      <span class="num font-semibold text-income text-lg sm:text-2xl sm:block sm:mt-1">{{ income_total|rupiah }}</span>
+    </div>
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600">Expense</span>
+      <span class="num font-semibold text-expense text-lg sm:text-2xl sm:block sm:mt-1">{{ expense_total|rupiah }}</span>
+    </div>
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600">Net</span>
+      <span class="num font-semibold text-lg sm:text-2xl sm:block sm:mt-1 {% if net_total >= 0 %}text-income{% else %}text-expense{% endif %}">{% if net_total >= 0 %}+{% else %}−{% endif %}{{ net_total|abs_value|rupiah }}</span>
     </div>
   </div>
 </section>
@@ -116,9 +118,9 @@
            x-transition:enter-end="opacity-100 translate-y-0"
            class="mt-3 divide-y divide-brand-100 border-t border-brand-100">
         {% for label in spending_by_category.options.labels %}
-          <div class="flex items-center justify-between py-1.5 text-sm">
-            <span class="text-brand-800 truncate">{{ label }}</span>
-            <span class="num text-brand-900">{{ spending_by_category.options.series|index:forloop.counter0|rupiah }}</span>
+          <div class="flex items-center justify-between gap-3 py-1.5 text-sm">
+            <span class="text-brand-800 truncate min-w-0">{{ label }}</span>
+            <span class="num text-brand-900 shrink-0">{{ spending_by_category.options.series|index:forloop.counter0|rupiah }}</span>
           </div>
         {% endfor %}
       </div>
@@ -158,9 +160,9 @@
       <div class="flex flex-col gap-3">
         {% for r in budgets %}
           <div>
-            <div class="flex items-center justify-between text-sm mb-1">
-              <span class="text-brand-900 truncate">{{ r.category.name }}</span>
-              <span class="num text-brand-600">{{ r.spent|rupiah }} / {{ r.limit|rupiah }}</span>
+            <div class="flex items-center justify-between gap-3 text-sm mb-1">
+              <span class="text-brand-900 truncate min-w-0">{{ r.category.name }}</span>
+              <span class="num text-brand-600 shrink-0">{{ r.spent|rupiah }} / {{ r.limit|rupiah }}</span>
             </div>
             <div class="relative h-2.5 rounded-full bg-brand-100 overflow-hidden">
               <div class="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-snap
@@ -189,9 +191,9 @@
       <div class="flex flex-col gap-3">
         {% for g in goals %}
           <div>
-            <div class="flex items-center justify-between text-sm mb-1">
-              <span class="text-brand-900 truncate">{{ g.goal.name }}</span>
-              <span class="num text-brand-600">{{ g.current|rupiah }} / {{ g.target|rupiah }}</span>
+            <div class="flex items-center justify-between gap-3 text-sm mb-1">
+              <span class="text-brand-900 truncate min-w-0">{{ g.goal.name }}</span>
+              <span class="num text-brand-600 shrink-0">{{ g.current|rupiah }} / {{ g.target|rupiah }}</span>
             </div>
             <div class="relative h-2.5 rounded-full bg-brand-100 overflow-hidden">
               <div class="absolute inset-y-0 left-0 rounded-full bg-brand-600 transition-[width] duration-500 ease-snap" style="width: {{ g.pct }}%"></div>
