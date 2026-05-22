@@ -32,7 +32,7 @@ The original model (a tree of **pockets** with **transfers** between them, **Poc
 - **Budgets** — monthly per-category limits with a pace signal (`budget_status`). **Goals** — target + mutable `current_amount` (`goal_status`). **Recurring** — `RecurringRule` materialised by `run_recurring` (`materialize_recurring`), stamping `Transaction.recurring_rule` (renders an **Auto** chip).
 - **Dashboard** is the headline: filterable (period / category / source / person) net-worth hero, income-vs-expense, category & source donuts, budget pace, goal progress, latest activity. Reports page reuses the same builders.
 - **Scheduling** — two nightly `pocket-*` systemd timers (`run_recurring` then `snapshot_balances`); see DEPLOY.md. No n8n.
-- **Data** — fresh start, no migration. Migration history for `transactions`/`ledger` was reset; `accounts` got an additive `0002`.
+- **Data** — migration history for `transactions`/`ledger` was reset; `accounts` got an additive `0002`. Dev is a fresh start. **Prod is migrated** via `manage.py import_legacy <dumpdata.json>` (export on old code → rebuild DB → import): pockets→sources, transfers dropped, owner=created_by, password hashes preserved. See DEPLOY.md "May 2026 ledger revamp (data migration)".
 - **Load-bearing** — the `balance.html` eye-toggle + `.chart-mask` curtain now wrap the **net-worth** figure/chart (key `pocket-balance-vis:dashboard:networth`); `current_balance` must filter `occurred_on >= starting_balance_as_of`; the net-worth trend is empty until `snapshot_balances` has run at least once.
 
 The sections below are the original build history, kept for the motion/visual rationale.

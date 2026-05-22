@@ -55,32 +55,67 @@ systemctl status pocket --no-pager
 
 If the deploy was a no-op for migrations / static files (just a template / view tweak), you can skip those steps — `git pull && systemctl restart pocket` is enough. Always tail `journalctl -u pocket -f` for ~10 seconds after the restart to confirm there's no boot-time exception.
 
-## One-time: May 2026 revamp (fresh start)
+## One-time: May 2026 ledger revamp (data migration)
 
-The revamp removed the pocket/transfer/sharing/credit-card models and replaced them with the income/expense ledger. There is **no data migration** — it's a clean reset. On the droplet, after pulling the revamp code:
+The revamp removed the pocket/transfer/sharing/credit-card models and replaced them with the income/expense ledger. The migration history was reset, so the live DB **cannot be migrated in place**. Instead we **export the legacy data on the old code, rebuild the DB on the new schema, and import it back** — preserving all income/expense transactions and logins. Transfers are dropped (not income/expense); pockets become flat `Source` tags; transaction owner = the user who entered it; net worth is preserved at the household level.
+
+A full `pg_dump` is the rollback anchor. **Gate the destructive steps on a passing local dry-run** of the importer against the real exported data.
+
+### A. Pre-cutover — export with the OLD code (still live)
 
 ```bash
 ssh mydroplet
+# 1. Backup — the rollback anchor.
+sudo -u postgres pg_dump pocket > /root/pocket-pre-revamp-$(date +%F).sql
+# 2. Export legacy data (old code can still read the pocket models).
 cd /home/pocket/apps/pocket
-sudo -u pocket git pull
-sudo -u pocket .venv/bin/pip install -r requirements.txt
+sudo -u pocket bash -c 'set -a; . /etc/pocket.env; set +a; \
+  .venv/bin/python manage.py dumpdata auth.User accounts.UserProfile \
+    transactions.Category transactions.Transaction transactions.Transfer pockets.Pocket \
+    --indent 2 -o /home/pocket/legacy.json'
+```
+
+Download `legacy.json` and **dry-run the importer locally** (fresh dev DB → `import_legacy legacy.json`); confirm the printed transaction count + household balance match prod's current dashboard. Only proceed if they line up.
+
+### B. Cutover — new code
+
+```bash
 systemctl stop pocket
-# Drop & recreate the application database (destroys old pocket/transfer data).
+cd /home/pocket/apps/pocket
+sudo -u pocket git pull                                   # main now has the revamp
+sudo -u pocket .venv/bin/pip install -r requirements.txt
+sudo -u pocket .venv/bin/tailwindcss -i static/css/input.css -o static/css/output.css --minify
 sudo -u postgres psql -c "DROP DATABASE pocket;"
 sudo -u postgres psql -c "CREATE DATABASE pocket OWNER pocket;"
 sudo -u pocket bash -c 'set -a; . /etc/pocket.env; set +a; \
-  .venv/bin/tailwindcss -i static/css/input.css -o static/css/output.css --minify && \
   .venv/bin/python manage.py migrate --noinput && \
+  .venv/bin/python manage.py import_legacy /home/pocket/legacy.json && \
   .venv/bin/python manage.py collectstatic --noinput && \
-  .venv/bin/python manage.py createuser admin --superuser --display-name "Admin" --password "<pw>" && \
-  .venv/bin/python manage.py createuser wife --display-name "Wife" --password "<pw>" && \
-  .venv/bin/python manage.py seed_household admin wife'
+  .venv/bin/python manage.py snapshot_balances'
 systemctl start pocket
-# Optional: seed today's snapshot so the net-worth chart has a baseline immediately.
-sudo -u pocket bash -c 'set -a; . /etc/pocket.env; set +a; .venv/bin/python manage.py snapshot_balances'
 ```
 
-`migrate` auto-seeds the default categories + starter sources via a `post_migrate` signal; `seed_household` claims those sources for the household.
+`migrate` seeds default categories + starter sources; `import_legacy` recreates users (password hashes preserved → logins keep working), maps pockets→sources, imports transactions, and prints a balance report. No `createuser`/`seed_household` needed — the importer recreates the users and the household.
+
+### C. Verify
+
+```bash
+curl -sI https://pocket.ionyx.org/accounts/login/ -m 10 | head -1   # 200
+```
+
+Log in as a real user (existing password works); the dashboard **net worth must match the pre-cutover total**; the transaction count matches the dump; the old pockets appear as sources. Then run the acceptance check at the bottom of this doc.
+
+### D. Rollback (if verify fails)
+
+```bash
+systemctl stop pocket
+sudo -u postgres psql -c "DROP DATABASE pocket;"
+sudo -u postgres psql -c "CREATE DATABASE pocket OWNER pocket;"
+sudo -u postgres psql pocket < /root/pocket-pre-revamp-<date>.sql
+cd /home/pocket/apps/pocket && sudo -u pocket git checkout <prev-sha>
+sudo -u pocket .venv/bin/pip install -r requirements.txt
+systemctl restart pocket
+```
 
 ## Scheduled jobs (systemd timers)
 
