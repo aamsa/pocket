@@ -53,6 +53,15 @@ class Command(BaseCommand):
             action="store_true",
             help="Import even if transactions already exist (otherwise aborts).",
         )
+        parser.add_argument(
+            "--book-installments",
+            action="store_true",
+            help=(
+                "Collapse each installment plan into one expense on its purchase "
+                "date and clamp any other future-dated row to today, so everything "
+                "counts as already spent (net worth matches the old dashboard)."
+            ),
+        )
 
     def handle(self, *args, **options):
         if Transaction.objects.exists() and not options["force"]:
@@ -88,7 +97,8 @@ class Command(BaseCommand):
             source_map = self._import_sources(pockets_raw, transactions_raw, household)
             category_map = self._import_categories(categories_raw, user_map)
             n_txn = self._import_transactions(
-                transactions_raw, user_map, category_map, source_map
+                transactions_raw, user_map, category_map, source_map,
+                book=options["book_installments"],
             )
 
         self._report(user_map, n_txn, len(source_map), len(category_map), len(transfers_raw))
@@ -209,28 +219,52 @@ class Command(BaseCommand):
 
     # ----------------------------------------------------------- transactions
 
-    def _import_transactions(self, transactions_raw, user_map, category_map, source_map):
-        objs = []
-        for rec in transactions_raw:
-            f = rec["fields"]
-            owner = user_map.get(f["created_by"])
-            category = category_map.get(f["category"])
-            if owner is None or category is None:
-                raise CommandError(
-                    f"Transaction {rec['pk']} references a missing user/category "
-                    f"(created_by={f['created_by']}, category={f['category']})."
-                )
-            objs.append(
-                Transaction(
-                    kind=f["kind"],
-                    amount=Decimal(str(f["amount"])),
-                    category=category,
-                    source=source_map.get(f["pocket"]),
-                    occurred_on=date.fromisoformat(f["occurred_on"]),
-                    notes=f.get("notes", "") or "",
-                    owner=owner,
-                )
+    def _mk_txn(self, f, user_map, category_map, source_map, *, amount=None, occurred_on=None):
+        owner = user_map.get(f["created_by"])
+        category = category_map.get(f["category"])
+        if owner is None or category is None:
+            raise CommandError(
+                f"Transaction references a missing user/category "
+                f"(created_by={f['created_by']}, category={f['category']})."
             )
+        return Transaction(
+            kind=f["kind"],
+            amount=amount if amount is not None else Decimal(str(f["amount"])),
+            category=category,
+            source=source_map.get(f["pocket"]),
+            occurred_on=occurred_on or date.fromisoformat(f["occurred_on"]),
+            notes=f.get("notes", "") or "",
+            owner=owner,
+        )
+
+    def _import_transactions(self, transactions_raw, user_map, category_map, source_map, *, book=False):
+        today = date.today()
+        objs = []
+        if not book:
+            for rec in transactions_raw:
+                objs.append(self._mk_txn(rec["fields"], user_map, category_map, source_map))
+        else:
+            # Group installment children; collapse each plan into one expense at
+            # its purchase (earliest) date. Clamp any other future-dated row to today.
+            groups = defaultdict(list)
+            singles = []
+            for rec in transactions_raw:
+                f = rec["fields"]
+                if f.get("installment_group"):
+                    groups[f["installment_group"]].append(f)
+                else:
+                    singles.append(f)
+            for children in groups.values():
+                children.sort(key=lambda c: c["occurred_on"])
+                first = children[0]
+                total = sum((Decimal(str(c["amount"])) for c in children), Decimal("0"))
+                occ = min(date.fromisoformat(first["occurred_on"]), today)
+                objs.append(
+                    self._mk_txn(first, user_map, category_map, source_map, amount=total, occurred_on=occ)
+                )
+            for f in singles:
+                occ = min(date.fromisoformat(f["occurred_on"]), today)
+                objs.append(self._mk_txn(f, user_map, category_map, source_map, occurred_on=occ))
         Transaction.objects.bulk_create(objs)
         return len(objs)
 
