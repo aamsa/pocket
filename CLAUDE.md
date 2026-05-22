@@ -1,12 +1,12 @@
 # Pocket — project guide for Claude Code
 
-A private, mobile-first personal finance web app for two people (the owner and his wife). Tracks earnings, spending, and transfers across hierarchical "pockets" with sharing and period-filtered reports.
+A private, mobile-first personal finance web app for two people (the owner and his wife). A simple **income/expense ledger** with categories and an optional payment **source** tag, a rich filterable dashboard (net-worth trend, cash flow, spending breakdowns, budget pace, goals), monthly budgets, savings goals, and auto-recurring entries. No accounts-with-balances, no transfers, no pocket tree — that earlier model was removed in the May 2026 revamp because the transfer pass-through was painful to keep in sync.
 
 ## Always
 
 - **Keep docs in sync with code.** README.md and this file describe what's actually shipped. Update them in the same change as the code.
 - **Never use Django's built-in admin UI.** All admin actions are either custom pages or management commands.
-- **Currency is IDR only.** Amounts are integers (no decimals). Display via the `rupiah` template filter, format input via the `x-rupiah` Alpine directive.
+- **Currency is IDR only.** Amounts are integers (no decimals). Display via the `rupiah` template filter, format input via the `x-rupiah` Alpine directive (or the inline amount-formatting `x-data` used on the transaction form).
 - **Mobile-first.** Designs start at iPhone width; desktop is the layered enhancement (sidebar instead of bottom tabs).
 - **Brand palette only.** Cream-to-mocha browns from `docs/colors.png`, mapped to `--color-brand-{50..900}` in `static/css/input.css`. Income uses `#5C8A4E` (sage), expense uses `#9C3D2E` (terracotta) — those are the only two off-palette accents allowed.
 
@@ -24,26 +24,27 @@ The project's recommended skills are pinned in `skills-lock.json` (committed). T
 
 - Django 5 (Python 3.14), HTMX 2 + Alpine 3 + ApexCharts via CDN
 - Tailwind CSS v4 — the **CSS-based config** (`@theme` block in `static/css/input.css`); there is no `tailwind.config.js`.
-- SQLite for dev (`db.sqlite3`, gitignored). Postgres planned for prod (`config/settings/prod.py` placeholder).
+- SQLite for dev (`db.sqlite3`, gitignored). Postgres for prod (`config/settings/prod.py`).
 - `pytailwindcss` provides the standalone Tailwind binary; no Node required.
 
 ## Where things live
 
 ```
 config/settings/{base,dev,prod}.py     dev defaults to settings.dev via manage.py
-apps/accounts/                         auth, UserProfile, force-password-change, mgmt commands
-apps/pockets/                          Pocket tree (cash + credit), PocketShare, permissions, card-cycle helpers
-apps/transactions/                     Category, Transaction, Transfer
-apps/reports/                          period filter + ApexCharts data builders
-apps/core/                             dashboard, money template tags (rupiah, balance_key), context processors
+apps/accounts/                         auth, UserProfile (display name + starting balance), force-password-change, mgmt commands
+apps/transactions/                     Category, Source, Transaction; their forms/views/urls; default-data seeding signal
+apps/ledger/                           Household, HouseholdMember, Budget, Goal, RecurringRule, DailyBalanceSnapshot;
+                                         services.py (balance, snapshot, recurring, budget, goal); management commands
+apps/reports/                          period filter + ApexCharts data builders (income/expense, category, source, net worth)
+apps/core/                             dashboard, money template tags (rupiah, balance_key, index), context processor
 templates/                             project-level (base.html + partials/, page templates)
-templates/partials/balance.html        amount + per-balance eye toggle (used everywhere a pocket balance is shown)
+templates/partials/balance.html        amount + per-balance eye toggle (used for standing balance figures)
+templates/dashboard/_panels.html       the rich dashboard panels (HTMX swap target)
+templates/ledger/{budgets,goals,recurring}/   ledger page templates
 static/css/input.css                   Tailwind v4 source — all design tokens defined here
 static/js/app.js                       HTMX/Alpine glue: chart hydration, x-rupiah directive
 docs/colors.png                        brand palette source
 ```
-
-Transfer URLs are mounted at `/transfers/` from `apps/transactions/transfer_urls.py` even though the views live in `apps/transactions/views.py` — keeps URLs natural while sharing the model app.
 
 ## Common commands
 
@@ -67,33 +68,38 @@ python manage.py runserver 0.0.0.0:8000
 python manage.py makemigrations <app>
 python manage.py migrate
 
-# user management (no web UI for this — superuser only)
-python manage.py createuser <username> [--superuser] [--display-name "..."]
+# user + household management (no web UI — superuser only)
+python manage.py createuser <username> [--superuser] [--display-name "..."] [--password "..."]
 python manage.py setpassword <username>
+python manage.py seed_household <username> [<username> ...] [--name "Household"]
+
+# scheduled jobs (run nightly in prod; manual in dev)
+python manage.py run_recurring [--date YYYY-MM-DD]        # materialise due recurring rules
+python manage.py snapshot_balances [--date YYYY-MM-DD]    # write daily net-worth snapshot
 ```
 
 `output.css` is gitignored — rebuild after changing templates that introduce new utility classes, or run watch mode while developing.
 
 ## Conventions
 
-- **UUID primary keys** on every domain model (Pocket, PocketShare, Category, Transaction, Transfer).
-- **Permission decorator** `@require_pocket_permission('view'|'manage')` from `apps.pockets.permissions` for every pocket/transaction view that takes a `pocket_id` URL kwarg.
-- **`visible_pocket_ids(user)`** is the canonical way to scope queries across owned + shared pockets. Don't roll your own.
-- **Default categories** are seeded by a `post_migrate` signal in `apps.transactions.signals` with `is_default=True`. Don't let users edit defaults — gate edits on `is_default=False AND created_by==user`.
-- **One Main pocket per user**, enforced by a partial unique index. The post-User-creation signal in `apps.pockets.signals` bootstraps it.
-- **Forms get a `user=` kwarg** so they can scope querysets and stamp `created_by`. Don't read `request.user` inside a form.
-- **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function.
-- **Credit-card pockets.** A `Pocket` row with `kind="credit"` represents a credit card. Required extra fields: `statement_day` (1–28) and `due_day` (1–28). `parent` must be NULL and `is_main` must be False (CheckConstraints enforce this; the form validates earlier). Spending lands on the card as a normal expense Transaction; balance goes negative as debt accrues. Repaying is a Transfer from a cash pocket → the card. The view layer should call `apps.pockets.services.card_cycle(card)` to get the snapshot — `outstanding` (clipped at today), `committed` (sum of future installments), `cycle_spend`, `pending_bill`, `due_on`, `days_until_due`. The Pockets list keeps cash pockets in the existing tree and renders credit cards in a separate flat **Cards** section. Dashboard headline shows Cash / Owed / Net when the user has at least one card; otherwise it stays as the single-figure Total balance.
-- **Installment plans (cicilan).** A multi-month credit-card purchase is stored as N expense Transactions on the card sharing an `installment_group` UUID, with `installment_index` (1..N) and `installment_total` (N) on each row. Materialised by `TransactionForm.save()` when `installment_months > 1`. Per-month amount is `total // months`; the last child eats the remainder so the children sum exactly to the entered total. Schedule: each child's `occurred_on` = purchase day shifted forward by k−1 months, clamped to month-end via `apps.pockets.services._clamp_day_to_month`. CheckConstraint `txn_installment_consistent` enforces that all three installment fields are NULL together or all set with `installment_total BETWEEN 2 AND 36`. Editing an existing installment child treats it as a regular Transaction (no installment selector). `apps.pockets.services.active_installment_plans(card)` aggregates plans for the card-detail Active plans panel.
-- **Past-only by default on history surfaces.** Future-dated `Transaction` rows exist in the DB once installment plans are created. The Dashboard latest list, monthly aggregates, and the default Transactions list filter `occurred_on__lte=today`. The Transactions filter form has a `show_planned` checkbox to opt back into seeing future entries (rendered with italics + a "Planned" chip and the "Cicilan k/N" chip via `templates/transactions/_list.html`). Reports surfaces keep period-bounded semantics — no clip needed.
+- **UUID primary keys** on every domain model (Category, Source, Transaction, Household, HouseholdMember, Budget, Goal, RecurringRule, DailyBalanceSnapshot).
+- **Ownership, not permissions.** Each `Transaction` has an `owner` (the person whose money it is). Scope a single user's data with `Transaction.objects.for_user(user)`; scope the whole household with `.for_household(user)`. There is no permission decorator and no per-object sharing — household membership is the only sharing mechanism.
+- **Household scoping.** `apps.ledger.services.household_user_ids(user)` is the canonical way to get the set of user ids in a combined view (returns `[user.id]` if the user isn't in a household). `household_members(user)` returns the User objects. `apps.reports.services.scope_owner_ids(user, person)` resolves a `person` filter value (`"me"` | `"household"` | a specific user id) into owner ids for charts. A user belongs to exactly one `Household` via the `HouseholdMember` OneToOne; seed it with `seed_household`.
+- **Sources are an optional flat tag.** A `Source` (BCA / Cash / GoPay / Card …) is *not* an account with a balance and there are no transfers. `Transaction.source` is a nullable FK (`SET_NULL`). Sources are **household-scoped** (`Source.objects.for_household(household)`) so both partners pick from one list. Seeded with `household=None` by the `post_migrate` signal, then claimed by `seed_household`.
+- **Net worth = one starting figure + flows.** Each `UserProfile` carries `starting_balance` + `starting_balance_as_of`. `apps.ledger.services.current_balance(user, as_of=None)` = `starting_balance + Σincome − Σexpense` over transactions with `occurred_on >= starting_balance_as_of` (and `<= as_of`). `household_balance(user)` sums members. The trend line is fed by **daily snapshots** (`DailyBalanceSnapshot`, one row per user per day) written by the `snapshot_balances` command — never recomputed live from transactions in the chart builder.
+- **Default categories + starter sources** are seeded by a `post_migrate` signal in `apps.transactions.signals` (idempotent). Don't let users edit default categories — gate edits on `is_default=False AND created_by==user`.
+- **Forms get a `user=` kwarg** so they can scope querysets and stamp `owner`/`created_by`/`household`. Don't read `request.user` inside a form. Unique constraints that span fields set in `save()` (Budget `(user, category, month)`; Source `(household, name)`) are validated in the form's `clean()` so a duplicate shows a friendly error instead of a 500.
+- **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function. Dashboard → `dashboard/_panels.html`; transactions → `transactions/_list.html`; reports → `reports/_panels.html`. Filter forms `hx-get` the same view with `hx-push-url="true"`.
+- **Budgets + pace.** A `Budget` is a monthly per-category limit (`month` normalised to day-1). `apps.ledger.services.budget_status(user, month)` returns rows with `spent`, `limit`, `remaining`, `pct`, `time_pct`, and a `signal` of `over` (spent > limit) / `fast` (spending faster than the share of the month elapsed) / `on_track`. The dashboard + budgets page render a bar coloured by signal with a tick marker at `time_pct`.
+- **Goals.** A `Goal` has `target_amount` + a single mutable `current_amount` (funding is intentionally decoupled from the ledger — there are no accounts to move money between). `goal_status(goal)` returns `pct`, `remaining`, `days_left`, and `needed_per_month`. Contributions adjust `current_amount` via the `goal_contribute` POST.
+- **Recurring entries.** A `RecurringRule` (kind, amount, category, source, `cadence` weekly|monthly, `anchor_day`, `next_run`, `active`) is materialised into `Transaction`s by `apps.ledger.services.materialize_recurring()` (the `run_recurring` command). It loops to catch missed runs and advances `next_run` (weekly → +7d; monthly → next month clamped to `anchor_day` via `_clamp_day_to_month`). Generated transactions carry a `recurring_rule` FK and render an **Auto** chip in the list.
 - **ApexCharts**: build the full options dict server-side (in `apps/reports/services.py`), pass through `json_script`, hydrate in `static/js/app.js` on `htmx:afterSwap` so charts re-render cleanly through swaps. Add `_format: "rupiah"` to apply the IDR axis/tooltip formatter.
-- **Dynamic Tailwind classes** like `bg-{{ pocket.color_token }}` need to appear in the `@source inline(...)` safelist in `input.css` since the scanner can't see them.
-- **Balance figures** — strictly *balance* totals — should be rendered through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace.
-  - **Default is HIDDEN.** The wrapper renders with `balance-hidden` statically; Alpine removes it only when localStorage records `'1'` for the key. So the user always sees `Rp ••••` first and reveals deliberately.
-  - Build the key with `{% balance_key "pocket" pocket.id "downstream" as bkey %}` (from `apps.core.templatetags.money`) — Django's stock `add` filter can't concat `str + UUID`, so don't try `"pocket:"|add:p.id`.
-  - Re-using the same key on multiple pages (e.g. `pocket:<uuid>:downstream` on both pockets-index and pocket-detail) is intentional — the user expects revealing a pocket on one page to also reveal it on the other.
-  - **Scope is standing balances only.** Use the partial for: the Dashboard *Total Balance* card, every pocket-row balance on the Pockets list, the two balance cards on the Pocket detail page. The **Reports → Pocket balances chart** also has a curtain — it uses the `.chart-mask` wrapper (see `templates/reports/_panels.html`), not the partial. The partial wraps a number; the chart curtain wraps a chart with an overlay so ApexCharts can still measure its width. Both share the localStorage namespace `pocket-balance-vis:` (chart key: `pocket-balance-vis:reports:pocket-balances`). **Do NOT add either curtain to** the Dashboard income/expense aggregates, transaction-row amounts, transfer rows, transactions filter list, the Income vs Expense / Spending by category / Top transactions panels on Reports, transaction form input. The user explicitly excluded these — don't add eyes there without asking first.
-  - Alpine state is **inlined in the partial**, not registered via `Alpine.data()`. This was deliberate after a stale-cache incident on iOS Safari left the click handler dead. Keep it inline.
+- **Dynamic Tailwind classes** like `bg-{{ source.color_token }}` need to appear in the `@source inline(...)` safelist in `input.css` since the scanner can't see them (the current safelist covers `bg-brand-{200..700}`).
+- **Balance figures** — strictly *balance / net-worth* totals — render through `templates/partials/balance.html`, never as a bare `{{ amount|rupiah }}`. The partial provides the per-balance eye toggle and `localStorage` persistence under the `pocket-balance-vis:` namespace (kept for continuity across the revamp).
+  - **Default is HIDDEN.** The wrapper renders with `balance-hidden` statically; Alpine removes it only when localStorage records `'1'` for the key. The user always sees `Rp ••••` first and reveals deliberately.
+  - Build composite keys with `{% balance_key ... as bkey %}` (from `apps.core.templatetags.money`) — Django's stock `add` filter can't concat `str + UUID`.
+  - **Scope is standing balances only.** Use the partial for the Dashboard **Net worth** figure (key `dashboard:networth`). The net-worth **chart** uses the `.chart-mask` curtain (overlay so ApexCharts can still measure width), sharing the same key `pocket-balance-vis:dashboard:networth` so revealing one reveals the other on next load. **Do NOT** add the curtain to the income/expense/net aggregate cards, transaction-row amounts, the budget/goal/source/top-transaction panels, or form inputs — the user explicitly excluded these; don't add eyes there without asking.
+  - Alpine state is **inlined in the partial**, not registered via `Alpine.data()`. Deliberate after a stale-cache incident on iOS Safari left the click handler dead. Keep it inline.
 
 ## Motion conventions
 
@@ -101,36 +107,38 @@ UI motion follows Emil Kowalski's design-engineering rules. The `emil-design-eng
 
 - **Easing tokens.** `--ease-snap` (`cubic-bezier(0.23, 1, 0.32, 1)`) is the UI default; `--ease-glide` (`cubic-bezier(0.77, 0, 0.175, 1)`) is for on-screen movement; the FAB sheet uses the iOS-drawer curve `cubic-bezier(0.32, 0.72, 0, 1)`. Both `--ease-*` tokens are exposed as Tailwind utilities (`ease-snap`, `ease-glide`). Don't introduce one-off curves — extend the token set instead.
 - **Never use `ease-in` for UI.** It delays the moment the user is watching most. The `.htmx-settling` class is the canonical example of the trap.
-- **Buttons declare exact properties.** `.btn-primary/.btn-secondary/.btn-ghost/.input` use explicit `transition: transform … , background-color … , …` — never the bare `transition` shorthand (which animates `all` via Tailwind's class).
-- **`focus-visible:` over `focus:` for buttons.** Mouse/touch press shouldn't leave a ring; keyboard focus should. `.input` keeps `focus:` because form fields legitimately need a focus ring on click.
-- **Press feedback is mandatory on tappable rows and nav.** `active:scale-[.96..99]` for hot-path nav (sidebar/bottom-tabs); buttons already have `active:scale-[.98]`. No colour transition on hot-path nav (frequent action — Emil's frequency rule).
-- **Origin-aware popovers.** Anchored popovers (account dropdown) need `origin-top-right` (or matching origin) so the scale animation comes out of the trigger. Modals stay centered — they're not anchored.
-- **`prefers-reduced-motion` block at end of `input.css`** disables transforms on `:active` and degrades movement-based entrances to opacity-only fades. Reduce, don't remove — keep opacity/colour cues.
-- **ApexCharts: initial render animates, swaps don't.** The `_ANIMATIONS` constant in `apps/reports/services.py` sets `dynamicAnimation.enabled: false` so period-filter swaps stay crisp. Reuse it for any new chart.
+- **List entrance** uses the `.anim-row` class (opacity-only `fade-in`) on transaction/budget/goal/recurring rows — degrades cleanly under reduced motion and re-runs pleasantly on HTMX swaps.
+- **Buttons declare exact properties.** `.btn-primary/.btn-secondary/.btn-ghost/.input` use explicit `transition: transform … , background-color … , …` — never the bare `transition` shorthand (which animates `all`).
+- **`focus-visible:` over `focus:` for buttons.** `.input` keeps `focus:` because form fields legitimately need a focus ring on click.
+- **Press feedback is mandatory on tappable rows and nav.** `active:scale-[.96..99]` for hot-path nav (sidebar/bottom-tabs); buttons already have `active:scale-[.98]`. No colour transition on hot-path nav.
+- **Origin-aware popovers.** Anchored popovers (account dropdown) need `origin-top-right` so the scale animation comes out of the trigger. Modals stay centered.
+- **`prefers-reduced-motion` block at end of `input.css`** disables transforms on `:active` and degrades movement-based entrances to opacity-only fades. Reduce, don't remove.
+- **ApexCharts: initial render animates, swaps don't.** The `_ANIMATIONS` constant in `apps/reports/services.py` sets `dynamicAnimation.enabled: false` so filter swaps stay crisp. Reuse it for any new chart.
 
 ## Test users (dev DB)
 
-If `db.sqlite3` is present from prior dev work:
-- `admin` / `TestPass456!` (superuser, display name "Admin" or "Aamsa" depending on whether the profile-save smoke ran)
-- `wife` / `WifePass456!` (member; has BCA pocket shared with manage)
-
-If you reset the DB, recreate them:
+If you reset the DB, recreate them with the documented flow:
 ```powershell
-python manage.py migrate
-python manage.py createuser admin --superuser --display-name "Admin"
-python manage.py createuser wife --display-name "Wife"
+del db.sqlite3
+python manage.py migrate                      # seeds default categories + starter sources
+python manage.py createuser admin --superuser --display-name "Admin" --password "TestPass456!"
+python manage.py createuser wife --display-name "Wife" --password "WifePass456!"
+python manage.py seed_household admin wife     # Household + memberships + claims the seeded sources
 ```
+Both users start with `force_password_change=True`, so the first browser login redirects to change-password (set a real one or clear the flag in the shell for testing).
 
 ## Deferred (not yet shipped)
 
-- **Soft-delete restore UI** for archived pockets (the model supports it; no view yet).
-- **CSV import/export.**
-- **Multi-currency** (explicitly out of scope for this MVP).
-- **Automated tests.** The README's verification flow is manual; no `pytest` yet.
+- **AI insights** (monthly summary card / natural-language "ask your money" chat) — the standout next step; intentionally skipped in v1.
+- **CSV import / export.**
+- **Multi-currency** (explicitly out of scope).
+- **Automated tests.** Verification is manual + shell/test-client smoke checks; no `pytest` yet.
+- **Removed in the revamp:** the pocket tree, transfers, pocket sharing (PocketShare), credit-card statement/due cycles, and installment plans (cicilan). Recurring covers true repetition; a decoupled "pay once over N months" feature could return later if missed.
 
 ## Production
 
-The app is live at <https://pocket.ionyx.org> on a DigitalOcean droplet. The production settings module is `config.settings.prod` driven by `/etc/pocket.env` on the droplet. Full operational runbook lives in [`DEPLOY.md`](DEPLOY.md); the broader project handoff (what shipped, what's load-bearing, what's deferred) is in [`HANDOFF.md`](HANDOFF.md). Key operational rules:
+The app is live at <https://pocket.ionyx.org> on a DigitalOcean droplet. The production settings module is `config.settings.prod` driven by `/etc/pocket.env` on the droplet. Full operational runbook lives in [`DEPLOY.md`](DEPLOY.md); the broader project handoff is in [`HANDOFF.md`](HANDOFF.md). Key operational rules:
 
 - **Don't disturb co-tenant services** on the droplet (`ionyx`, `n8n`, `sablonmechanics-v2`, plus other ionyx subdomain vhosts). Pocket is isolated to its own user (`pocket`), port (`127.0.0.1:8002`), database (`pocket`), env file (`/etc/pocket.env`), systemd unit (`pocket.service`), and Nginx vhost (`pocket.ionyx.org`).
 - **Cloudflare SSL mode is Full** (not Full Strict). The origin uses snakeoil; Full Strict would refuse the handshake.
+- **Two nightly jobs** (`run_recurring` then `snapshot_balances`) run as `pocket`-owned systemd timers — recurring first so the day's auto-entries are counted in the snapshot. See DEPLOY.md. No n8n involvement.

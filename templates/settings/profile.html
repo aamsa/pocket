@@ -24,8 +24,23 @@
         {{ form.display_name }}
         {% for err in form.display_name.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
       </label>
+
+      <div class="h-px bg-brand-100 my-1"></div>
+      <h2 class="text-base font-semibold text-brand-900">Net worth</h2>
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ form.starting_balance.label }}</span>
+        {{ form.starting_balance }}
+        <span class="text-xs text-brand-600">{{ form.starting_balance.help_text }}</span>
+        {% for err in form.starting_balance.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+      </label>
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ form.starting_balance_as_of.label }}</span>
+        {{ form.starting_balance_as_of }}
+        {% for err in form.starting_balance_as_of.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+      </label>
+
       <button type="submit" class="btn-primary mt-1">
-        <i data-lucide="check" class="icon"></i> Save profile
+        <i data-lucide="check" class="icon"></i> Save
       </button>
     </form>
 
@@ -35,14 +50,29 @@
         <span class="flex-1 text-brand-900">All transactions</span>
         <i data-lucide="chevron-right" class="icon text-brand-500"></i>
       </a>
+      <a href="{% url 'ledger:budgets' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
+        <i data-lucide="target" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">Budgets</span>
+        <i data-lucide="chevron-right" class="icon text-brand-500"></i>
+      </a>
+      <a href="{% url 'ledger:goals' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
+        <i data-lucide="flag" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">Goals</span>
+        <i data-lucide="chevron-right" class="icon text-brand-500"></i>
+      </a>
+      <a href="{% url 'ledger:recurring' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
+        <i data-lucide="repeat" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">Recurring</span>
+        <i data-lucide="chevron-right" class="icon text-brand-500"></i>
+      </a>
       <a href="{% url 'transactions:categories' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
         <i data-lucide="tag" class="icon text-brand-600"></i>
         <span class="flex-1 text-brand-900">Categories</span>
         <i data-lucide="chevron-right" class="icon text-brand-500"></i>
       </a>
-      <a href="{% url 'pockets:shares_inbox' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
-        <i data-lucide="inbox" class="icon text-brand-600"></i>
-        <span class="flex-1 text-brand-900">Share invites</span>
+      <a href="{% url 'transactions:sources' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
+        <i data-lucide="wallet" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">Sources</span>
         <i data-lucide="chevron-right" class="icon text-brand-500"></i>
       </a>
       <a href="{% url 'accounts:change_password' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">

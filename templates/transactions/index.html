@@ -11,6 +11,9 @@
       <p class="text-sm text-brand-600 mt-1">Filter, review, edit. The full ledger.</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
+      <a href="{% url 'transactions:sources' %}" class="btn-ghost hidden md:inline-flex">
+        <i data-lucide="wallet" class="icon"></i> Sources
+      </a>
       <a href="{% url 'transactions:categories' %}" class="btn-ghost hidden md:inline-flex">
         <i data-lucide="tag" class="icon"></i> Categories
       </a>
@@ -26,7 +29,7 @@
         hx-target="#txn-list"
         hx-trigger="change from:select, change from:input[type=date]"
         hx-push-url="true">
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
       <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">From</span>
         {{ form.start }}
@@ -35,23 +38,23 @@
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">To</span>
         {{ form.end }}
       </label>
-      <label class="flex flex-col gap-1.5 min-w-0 col-span-2 md:col-span-1">
+      <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Kind</span>
         {{ form.kind }}
       </label>
-      <label class="flex flex-col gap-1.5 min-w-0 col-span-2 md:col-span-1">
-        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Pocket</span>
-        {{ form.pocket }}
-      </label>
-      <label class="flex flex-col gap-1.5 min-w-0 col-span-2 md:col-span-1">
+      <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Category</span>
         {{ form.category }}
       </label>
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Source</span>
+        {{ form.source }}
+      </label>
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Who</span>
+        {{ form.person }}
+      </label>
     </div>
-    <label class="inline-flex items-center gap-2 mt-3 cursor-pointer text-sm text-brand-700">
-      {{ form.show_planned }}
-      <span>Show planned (future-dated installments)</span>
-    </label>
   </form>
 
   <div id="txn-list">

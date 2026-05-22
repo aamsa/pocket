@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load money %}
+
+{% block title %}Goals · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  {% include "partials/messages.html" %}
+
+  <div class="flex items-end justify-between gap-3 mb-5">
+    <div class="min-w-0 flex-1">
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Goals</h1>
+      <p class="text-sm text-brand-600 mt-1">Savings targets you track toward.</p>
+    </div>
+    <a href="{% url 'ledger:goal_new' %}" class="btn-primary shrink-0">
+      <i data-lucide="plus" class="icon"></i>
+      <span class="hidden md:inline">New goal</span>
+    </a>
+  </div>
+
+  {% if goals %}
+    <div class="grid gap-4 md:grid-cols-2">
+      {% for g in goals %}
+        <div class="card p-5 anim-row">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <h2 class="font-semibold text-brand-900 truncate">{{ g.goal.name }}</h2>
+            <a href="{% url 'ledger:goal_edit' g.goal.id %}" class="text-xs text-brand-600 hover:text-brand-900 shrink-0">Edit</a>
+          </div>
+          <div class="text-sm num text-brand-600 mb-2">{{ g.current|rupiah }} <span class="text-brand-400">/ {{ g.target|rupiah }}</span></div>
+          <div class="relative h-2.5 rounded-full bg-brand-100 overflow-hidden">
+            <div class="absolute inset-y-0 left-0 rounded-full bg-brand-600 transition-[width] duration-500 ease-snap" style="width: {{ g.pct }}%"></div>
+          </div>
+          <div class="text-xs text-brand-600 mt-1.5">
+            {{ g.pct }}%
+            {% if g.complete %} · reached 🎉
+            {% elif g.overdue %} · <span class="text-expense">target date passed</span>
+            {% elif g.needed_per_month %} · {{ g.needed_per_month|rupiah }}/mo{% if g.days_left %} · {{ g.days_left }} days left{% endif %}
+            {% endif %}
+          </div>
+
+          <form method="post" action="{% url 'ledger:goal_contribute' g.goal.id %}" class="flex items-center gap-2 mt-3">
+            {% csrf_token %}
+            <input type="number" name="amount" inputmode="numeric" placeholder="Add amount"
+                   class="input flex-1 num py-2" />
+            <button type="submit" class="btn-secondary px-4 py-2 shrink-0"><i data-lucide="plus" class="icon"></i></button>
+          </form>
+          <form method="post" action="{% url 'ledger:goal_delete' g.goal.id %}" class="mt-2 text-right"
+                onsubmit="return confirm('Archive {{ g.goal.name }}?');">{% csrf_token %}
+            <button type="submit" class="text-xs text-brand-500 hover:text-expense">Archive goal</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card p-10 text-center text-sm text-brand-600">
+      <i data-lucide="flag" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+      <p>No goals yet. <a href="{% url 'ledger:goal_new' %}" class="underline">Create one →</a></p>
+    </div>
+  {% endif %}
+{% endblock %}

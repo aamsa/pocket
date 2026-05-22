@@ -20,31 +20,8 @@
       </h1>
     </div>
 
-    <script>
-      function txnForm() {
-        return {
-          amount: '{% if form.amount.value %}{{ form.amount.value|rupiah_plain }}{% endif %}',
-          pocketKind: 'cash',
-          kind: '{{ form.kind.value|default:kind }}',
-          months: {{ form.installment_months.value|default:1 }},
-          init() {
-            const sel = this.$el.querySelector('select[name=pocket]');
-            if (sel) {
-              const readKind = () => {
-                const opt = sel.options[sel.selectedIndex];
-                this.pocketKind = (opt && opt.dataset.kind) || 'cash';
-              };
-              readKind();
-              sel.addEventListener('change', readKind);
-            }
-          },
-          get rawAmount() { return parseInt((this.amount || '').replace(/\D+/g,''), 10) || 0; },
-          get monthly() { return this.months > 1 ? Math.floor(this.rawAmount / this.months) : 0; },
-        };
-      }
-    </script>
     <form method="post" class="card p-5 md:p-6 flex flex-col gap-4"
-          x-data="txnForm()">
+          x-data="{ amount: '{% if form.amount.value %}{{ form.amount.value|rupiah_plain }}{% endif %}' }">
       {% csrf_token %}
       {{ form.kind }}
 
@@ -66,21 +43,6 @@
       {% for field in form %}
         {% if field.name == 'kind' or field.name == 'amount' %}
           {# already rendered above #}
-        {% elif field.name == 'installment_months' %}
-          <div x-show="pocketKind === 'credit' && kind === 'expense' && !{% if mode == 'edit' %}true{% else %}false{% endif %}" x-cloak>
-            <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
-              <select name="installment_months" x-model.number="months" class="{{ field.field.widget.attrs.class }}">
-                {% for value, label in field.field.choices %}
-                  <option value="{{ value }}" {% if field.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-              {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
-              <p class="text-xs text-brand-600" x-show="months > 1">
-                <span x-text="'Rp ' + (rawAmount).toLocaleString('id-ID') + ' over ' + months + ' months ≈ Rp ' + monthly.toLocaleString('id-ID') + ' / month'"></span>
-              </p>
-            </label>
-          </div>
         {% else %}
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>

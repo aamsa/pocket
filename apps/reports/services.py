@@ -1,4 +1,10 @@
-"""Chart data builders for the reports page."""
+"""Chart data builders for the dashboard and reports page.
+
+All builders take `owner_ids` (the people whose ledger to include) plus
+optional `source_ids` / `category_id` filters, and return a dict with
+`has_data` + ApexCharts `options`. Initial render animates; period-swap
+re-renders don't (see `_ANIMATIONS`).
+"""
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -7,9 +13,7 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from apps.pockets.models import Pocket
-from apps.pockets.permissions import visible_pocket_ids
-from apps.transactions.models import Category, Transaction, Transfer
+from apps.transactions.models import Transaction
 
 
 # ---------------------------------------------------------------------------
@@ -72,8 +76,27 @@ def resolve_period(period_key: str, start: date | None, end: date | None) -> Per
 
 
 # ---------------------------------------------------------------------------
-# Chart builders
+# Scope + bucket helpers
 # ---------------------------------------------------------------------------
+
+
+def scope_owner_ids(user, person) -> list:
+    """Resolve a `person` filter value into a list of owner ids.
+
+    `person` is "me" (default), "household", or a specific user id string.
+    """
+    from apps.ledger.services import household_user_ids
+
+    if person == "household":
+        return household_user_ids(user)
+    if person and person != "me":
+        try:
+            uid = int(person)
+        except (TypeError, ValueError):
+            return [user.id]
+        if uid in household_user_ids(user):
+            return [uid]
+    return [user.id]
 
 
 def _bucket_key(d: date, granularity: str) -> str:
@@ -102,16 +125,16 @@ def _all_buckets(period: Period):
     return out
 
 
-def scope_pocket_ids(user, pocket_id, include_children) -> list:
-    if pocket_id:
-        try:
-            pocket = Pocket.objects.get(pk=pocket_id)
-        except Pocket.DoesNotExist:
-            return visible_pocket_ids(user)
-        if include_children:
-            return pocket.descendant_ids_with_self()
-        return [pocket.id]
-    return visible_pocket_ids(user)
+def _bucket_asof(bucket: date, period: Period) -> date:
+    """Representative end date for a bucket, clamped to the period end."""
+    if period.granularity == "month":
+        import calendar
+
+        last = calendar.monthrange(bucket.year, bucket.month)[1]
+        end = bucket.replace(day=last)
+    else:
+        end = bucket
+    return min(end, period.end)
 
 
 _BASE_FONT = "Inter, sans-serif"
@@ -131,14 +154,28 @@ _ANIMATIONS = {
 }
 
 
-def income_vs_expense(user, period: Period, pocket_ids: list, *, category_id=None):
+def _scoped(owner_ids, period, *, source_ids=None, category_id=None, kind=None):
     qs = Transaction.objects.filter(
-        pocket_id__in=pocket_ids,
+        owner_id__in=owner_ids,
         occurred_on__gte=period.start,
         occurred_on__lte=period.end,
     )
+    if kind:
+        qs = qs.filter(kind=kind)
+    if source_ids:
+        qs = qs.filter(source_id__in=source_ids)
     if category_id:
         qs = qs.filter(category_id=category_id)
+    return qs
+
+
+# ---------------------------------------------------------------------------
+# Chart builders
+# ---------------------------------------------------------------------------
+
+
+def income_vs_expense(period: Period, *, owner_ids, source_ids=None, category_id=None):
+    qs = _scoped(owner_ids, period, source_ids=source_ids, category_id=category_id)
     income_buckets = defaultdict(Decimal)
     expense_buckets = defaultdict(Decimal)
     for row in qs.values("kind", "occurred_on").annotate(total=Sum("amount")):
@@ -175,14 +212,9 @@ def income_vs_expense(user, period: Period, pocket_ids: list, *, category_id=Non
     }
 
 
-def spending_by_category(user, period: Period, pocket_ids: list):
+def spending_by_category(period: Period, *, owner_ids, source_ids=None):
     qs = (
-        Transaction.objects.filter(
-            kind="expense",
-            pocket_id__in=pocket_ids,
-            occurred_on__gte=period.start,
-            occurred_on__lte=period.end,
-        )
+        _scoped(owner_ids, period, source_ids=source_ids, kind="expense")
         .values("category_id", "category__name", "category__color_token")
         .annotate(total=Sum("amount"))
         .order_by("-total")[:8]
@@ -206,77 +238,67 @@ def spending_by_category(user, period: Period, pocket_ids: list):
     }
 
 
-def pocket_balances_over_time(user, period: Period, pocket_ids: list, *, series_name: str = "Overall"):
-    """Combined running balance across `pocket_ids` over the period.
-
-    One series. Starting balance = sum of each pocket's balance at period.start - 1d.
-    Per-bucket delta = transactions on any pocket in scope (income +, expense −),
-    plus transfers that *cross the boundary* of pocket_ids (transfers wholly
-    inside the scope cancel out, mirroring `balance_for(include_descendants=True)`).
-    """
-    if not pocket_ids:
-        return {"has_data": False, "options": {}}
-
-    starting = sum(
-        (_running_balance_at(pid, period.start - timedelta(days=1)) for pid in pocket_ids),
-        Decimal("0"),
+def source_breakdown(period: Period, *, owner_ids, kind="expense"):
+    qs = (
+        _scoped(owner_ids, period, kind=kind)
+        .values("source__name", "source__color_token")
+        .annotate(total=Sum("amount"))
+        .order_by("-total")
     )
+    labels = [(r["source__name"] or "No source") for r in qs]
+    series = [int(r["total"] or 0) for r in qs]
+    return {
+        "has_data": bool(series),
+        "options": {
+            "chart": {"type": "donut", "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
+            "labels": labels,
+            "series": series,
+            "colors": _BRAND_RAMP,
+            "dataLabels": {"enabled": False},
+            "legend": {"position": "bottom", "fontSize": "12px", "labels": {"colors": "#583101"}},
+            "stroke": {"width": 2, "colors": ["#FFFFFF"]},
+            "plotOptions": {"pie": {"donut": {"size": "62%"}}},
+            "tooltip": {},
+            "_format": "rupiah",
+        },
+    }
+
+
+def net_worth_over_time(period: Period, *, user_ids, series_name="Net worth"):
+    """Combined balance across `user_ids` over the period, fed by daily
+    snapshots. For each bucket we carry forward the latest snapshot on/before
+    the bucket's end date and sum across members."""
+    from apps.ledger.models import DailyBalanceSnapshot
+
+    snaps = (
+        DailyBalanceSnapshot.objects.filter(
+            user_id__in=user_ids, on_date__lte=period.end
+        )
+        .order_by("user_id", "on_date")
+        .values_list("user_id", "on_date", "balance")
+    )
+    by_user = defaultdict(list)
+    for uid, on_date, balance in snaps:
+        by_user[uid].append((on_date, Decimal(balance)))
+
+    def balance_as_of(rows, as_of):
+        val = Decimal("0")
+        for d, b in rows:
+            if d <= as_of:
+                val = b
+            else:
+                break
+        return val
 
     buckets = _all_buckets(period)
-    bucket_keys = [_bucket_key(b, period.granularity) for b in buckets]
-    bucket_labels = [_bucket_label(b, period.granularity) for b in buckets]
-
-    per_bucket_delta = defaultdict(Decimal)
-
-    for row in (
-        Transaction.objects.filter(
-            pocket_id__in=pocket_ids,
-            occurred_on__gte=period.start,
-            occurred_on__lte=period.end,
-        )
-        .values("kind", "occurred_on")
-        .annotate(total=Sum("amount"))
-    ):
-        sign = 1 if row["kind"] == "income" else -1
-        per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] += (
-            sign * Decimal(row["total"] or 0)
-        )
-
-    # Boundary-crossing transfers only — intra-scope transfers cancel.
-    for row in (
-        Transfer.objects.filter(
-            to_pocket_id__in=pocket_ids,
-            occurred_on__gte=period.start,
-            occurred_on__lte=period.end,
-        )
-        .exclude(from_pocket_id__in=pocket_ids)
-        .values("occurred_on")
-        .annotate(total=Sum("amount"))
-    ):
-        per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] += Decimal(
-            row["total"] or 0
-        )
-    for row in (
-        Transfer.objects.filter(
-            from_pocket_id__in=pocket_ids,
-            occurred_on__gte=period.start,
-            occurred_on__lte=period.end,
-        )
-        .exclude(to_pocket_id__in=pocket_ids)
-        .values("occurred_on")
-        .annotate(total=Sum("amount"))
-    ):
-        per_bucket_delta[_bucket_key(row["occurred_on"], period.granularity)] -= Decimal(
-            row["total"] or 0
-        )
-
-    running = starting
+    labels = [_bucket_label(b, period.granularity) for b in buckets]
     data = []
-    for key in bucket_keys:
-        running += per_bucket_delta.get(key, Decimal("0"))
-        data.append(int(running))
+    for b in buckets:
+        as_of = _bucket_asof(b, period)
+        total = sum((balance_as_of(by_user.get(uid, []), as_of) for uid in user_ids), Decimal("0"))
+        data.append(int(total))
 
-    has_data = any(data) or starting != 0
+    has_data = bool(snaps) and any(data)
     return {
         "has_data": has_data,
         "options": {
@@ -287,7 +309,7 @@ def pocket_balances_over_time(user, period: Period, pocket_ids: list, *, series_
             "colors": [_BRAND_RAMP[0]],
             "grid": {"borderColor": _GRID_COLOR, "strokeDashArray": 4},
             "legend": {"show": False},
-            "xaxis": {"categories": bucket_labels, "labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
+            "xaxis": {"categories": labels, "labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
             "yaxis": {"labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
             "tooltip": {"theme": "light"},
             "series": [{"name": series_name, "data": data}],
@@ -296,33 +318,10 @@ def pocket_balances_over_time(user, period: Period, pocket_ids: list, *, series_
     }
 
 
-def _running_balance_at(pocket_id, as_of: date) -> Decimal:
-    income = Transaction.objects.filter(
-        pocket_id=pocket_id, kind="income", occurred_on__lte=as_of
-    ).aggregate(s=Sum("amount"))["s"] or 0
-    expense = Transaction.objects.filter(
-        pocket_id=pocket_id, kind="expense", occurred_on__lte=as_of
-    ).aggregate(s=Sum("amount"))["s"] or 0
-    transfer_in = Transfer.objects.filter(
-        to_pocket_id=pocket_id, occurred_on__lte=as_of
-    ).aggregate(s=Sum("amount"))["s"] or 0
-    transfer_out = Transfer.objects.filter(
-        from_pocket_id=pocket_id, occurred_on__lte=as_of
-    ).aggregate(s=Sum("amount"))["s"] or 0
-    return Decimal(income) - Decimal(expense) + Decimal(transfer_in) - Decimal(transfer_out)
-
-
-def top_transactions(user, period: Period, pocket_ids: list, *, n=5, category_id=None):
-    qs = (
-        Transaction.objects.filter(
-            pocket_id__in=pocket_ids,
-            occurred_on__gte=period.start,
-            occurred_on__lte=period.end,
-        )
-        .select_related("pocket", "category")
+def top_transactions(period: Period, *, owner_ids, source_ids=None, category_id=None, n=5):
+    qs = _scoped(owner_ids, period, source_ids=source_ids, category_id=category_id).select_related(
+        "source", "category", "owner", "owner__profile"
     )
-    if category_id:
-        qs = qs.filter(category_id=category_id)
     top_in = list(qs.filter(kind="income").order_by("-amount", "-occurred_on")[:n])
     top_out = list(qs.filter(kind="expense").order_by("-amount", "-occurred_on")[:n])
     return {"top_income": top_in, "top_expense": top_out}

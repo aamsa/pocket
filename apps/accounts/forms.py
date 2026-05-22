@@ -56,14 +56,36 @@ class ProfileForm(forms.Form):
         widget=forms.TextInput(attrs={"class": input_class}),
         label="Display name",
     )
+    starting_balance = forms.DecimalField(
+        max_digits=14,
+        decimal_places=0,
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={"class": input_class, "inputmode": "numeric", "placeholder": "0"}),
+        label="Starting balance (Rp)",
+        help_text="Your total money at the start of the date below. Balance runs forward from here.",
+    )
+    starting_balance_as_of = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"class": input_class, "type": "date"}, format="%Y-%m-%d"),
+        label="As of",
+    )
 
     def __init__(self, *args, profile=None, **kwargs):
         self.profile = profile
         if profile is not None and "initial" not in kwargs:
-            kwargs["initial"] = {"display_name": profile.display_name}
+            kwargs["initial"] = {
+                "display_name": profile.display_name,
+                "starting_balance": profile.starting_balance,
+                "starting_balance_as_of": profile.starting_balance_as_of,
+            }
         super().__init__(*args, **kwargs)
 
     def save(self):
         self.profile.display_name = self.cleaned_data["display_name"].strip()
-        self.profile.save(update_fields=["display_name"])
+        self.profile.starting_balance = self.cleaned_data.get("starting_balance") or 0
+        self.profile.starting_balance_as_of = self.cleaned_data.get("starting_balance_as_of")
+        self.profile.save(
+            update_fields=["display_name", "starting_balance", "starting_balance_as_of"]
+        )
         return self.profile

@@ -18,110 +18,66 @@
     </a>
   </div>
 
-  {% if pending_invites %}
-    <div class="card p-4 md:p-5 mb-5 flex items-center gap-3 bg-brand-100/60 border-brand-200">
-      <i data-lucide="inbox" class="w-6 h-6 text-brand-700 stroke-[1.75] shrink-0"></i>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-medium text-brand-900">
-          You have {{ pending_invites|length }} pending invite{{ pending_invites|length|pluralize }}.
-        </div>
-        <div class="text-xs text-brand-600 truncate">
-          {% for s in pending_invites %}{{ s.pocket.name }} from {{ s.invited_by.profile.label }}{% if not forloop.last %} · {% endif %}{% endfor %}
-        </div>
-      </div>
-      <a href="{% url 'pockets:shares_inbox' %}" class="btn-secondary shrink-0">Open</a>
-    </div>
-  {% endif %}
+  <form class="card p-4 md:p-5 mb-5"
+        hx-get="{% url 'core:dashboard' %}"
+        hx-target="#dashboard-panels"
+        hx-trigger="change from:select, change from:input[type=date]"
+        hx-push-url="true">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Who</span>
+        <select name="person" class="input">
+          <option value="me" {% if person == 'me' %}selected{% endif %}>Me</option>
+          {% for m in other_members %}
+            <option value="{{ m.id }}" {% if person == m.id|stringformat:'s' %}selected{% endif %}>{{ m.profile.label }}</option>
+          {% endfor %}
+          {% if members|length > 1 %}
+            <option value="household" {% if person == 'household' %}selected{% endif %}>Everyone</option>
+          {% endif %}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Period</span>
+        <select name="period" class="input">
+          {% for key, label in period_choices %}
+            <option value="{{ key }}" {% if period_key == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Category</span>
+        <select name="category" class="input">
+          <option value="">All categories</option>
+          {% for c in available_categories %}
+            <option value="{{ c.id }}" {% if category_id == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }} · {{ c.get_kind_display }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Source</span>
+        <select name="source" class="input">
+          <option value="">All sources</option>
+          {% for s in available_sources %}
+            <option value="{{ s.id }}" {% if source_id == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
 
-  <section class="grid gap-3 md:gap-4 md:grid-cols-3 mb-6">
-    {% if has_cards %}
-      <div class="card p-5 md:col-span-3">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div class="min-w-0 flex items-baseline justify-between sm:block gap-3">
-            <div class="text-xs uppercase tracking-wider text-brand-600 shrink-0">Cash</div>
-            <div class="sm:mt-2 min-w-0">
-              {% include "partials/balance.html" with amount=cash_total key="dashboard:cash" text_class="text-lg md:text-2xl font-semibold text-brand-900" %}
-            </div>
-          </div>
-          <div class="min-w-0 flex items-baseline justify-between sm:block gap-3">
-            <div class="text-xs uppercase tracking-wider text-brand-600 shrink-0">Owed</div>
-            <div class="sm:mt-2 min-w-0">
-              {% include "partials/balance.html" with amount=owed_total key="dashboard:owed" text_class="text-lg md:text-2xl font-semibold text-expense" %}
-            </div>
-          </div>
-          <div class="min-w-0 flex items-baseline justify-between sm:block gap-3">
-            <div class="text-xs uppercase tracking-wider text-brand-600 shrink-0">Net</div>
-            <div class="sm:mt-2 min-w-0">
-              {% include "partials/balance.html" with amount=net_total key="dashboard:net" text_class="text-lg md:text-2xl font-semibold text-brand-900" %}
-            </div>
-          </div>
-        </div>
-        <div class="text-xs text-brand-600 mt-3">
-          {{ own_count }} own pocket{{ own_count|pluralize }}{% if shared_count %} · {{ shared_count }} shared{% endif %} · Net = Cash − Owed
-        </div>
-      </div>
-    {% else %}
-    <div class="card p-5">
-      <div class="text-xs uppercase tracking-wider text-brand-600">Total balance</div>
-      <div class="mt-2">
-        {% include "partials/balance.html" with amount=net_total key="dashboard:total" text_class="text-2xl md:text-3xl font-semibold text-brand-900" %}
-      </div>
-      <div class="text-xs text-brand-600 mt-1">
-        {{ own_count }} own pocket{{ own_count|pluralize }}{% if shared_count %} · {{ shared_count }} shared{% endif %}
-      </div>
+      {% if period_key == 'custom' %}
+        <label class="flex flex-col gap-1.5 min-w-0">
+          <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">From</span>
+          <input type="date" name="start" value="{{ custom_start }}" class="input" />
+        </label>
+        <label class="flex flex-col gap-1.5 min-w-0">
+          <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">To</span>
+          <input type="date" name="end" value="{{ custom_end }}" class="input" />
+        </label>
+      {% endif %}
     </div>
-    {% endif %}
-    <div class="card p-5">
-      <div class="text-xs uppercase tracking-wider text-brand-600">{{ month_label }} · income</div>
-      <div class="mt-2 text-2xl md:text-3xl font-semibold text-income num">{{ income_total|rupiah }}</div>
-      <div class="text-xs text-brand-600 mt-1">Across all visible pockets</div>
-    </div>
-    <div class="card p-5">
-      <div class="text-xs uppercase tracking-wider text-brand-600">{{ month_label }} · expense</div>
-      <div class="mt-2 text-2xl md:text-3xl font-semibold text-expense num">{{ expense_total|rupiah }}</div>
-      <div class="text-xs text-brand-600 mt-1">
-        Net:
-        <span class="num font-medium {% if income_total >= expense_total %}text-income{% else %}text-expense{% endif %}">
-          {% if income_total >= expense_total %}+{% else %}−{% endif %}{{ income_total|sub:expense_total|abs_value|rupiah }}
-        </span>
-      </div>
-    </div>
-  </section>
+    <p class="text-xs text-brand-600 mt-2 truncate">{{ period.label }} · {{ period.start|date:"d M Y" }} → {{ period.end|date:"d M Y" }}</p>
+  </form>
 
-  <section class="card p-5 md:p-6">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-base font-semibold text-brand-900">Latest transactions</h2>
-      <a href="{% url 'transactions:index' %}" class="text-sm text-brand-700 hover:text-brand-900">View all →</a>
-    </div>
-    {% if latest %}
-      <ul class="divide-y divide-brand-100 -mx-2">
-        {% for t in latest %}
-          <li class="flex items-center gap-3 px-2 py-2.5">
-            <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
-              <i data-lucide="{{ t.category.icon }}" class="icon"></i>
-            </span>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="font-medium text-brand-900 truncate">{{ t.category.name }}</span>
-                <span class="text-xs text-brand-600 shrink-0">· {{ t.pocket.name }}</span>
-              </div>
-              <div class="text-xs text-brand-600 truncate">{{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}</div>
-            </div>
-            <div class="text-right shrink-0 num font-semibold {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
-              {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="text-sm text-brand-600 py-8 text-center">
-        <i data-lucide="receipt-text" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-        <p>No transactions yet. Tap
-          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brand-700 text-brand-50 align-text-bottom mx-0.5">
-            <i data-lucide="plus" class="w-3 h-3"></i>
-          </span>
-          to add the first one.</p>
-      </div>
-    {% endif %}
-  </section>
+  <div id="dashboard-panels">
+    {% include "dashboard/_panels.html" %}
+  </div>
 {% endblock %}

@@ -1,56 +1,32 @@
 {% load money %}
 
-{% if rows %}
-  {% now "Y-m-d" as today_iso %}
+{% if txns %}
   <ul class="card divide-y divide-brand-100 overflow-hidden">
-    {% for row in rows %}
-      {% if row.type == 'txn' %}
-        {% with t=row.obj %}
-          {% with is_planned=t.occurred_on|date:"Y-m-d" %}
-          <li class="flex items-center gap-3 px-4 py-3 {% if is_planned > today_iso %}italic{% endif %}">
-            <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
-              <i data-lucide="{{ t.category.icon }}" class="icon"></i>
+    {% for t in txns %}
+      <li class="flex items-center gap-3 px-4 py-3 anim-row">
+        <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
+          <i data-lucide="{{ t.category.icon }}" class="icon"></i>
+        </span>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-brand-900 truncate">{{ t.category.name }}</div>
+          <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
+            <span class="truncate">
+              {% if t.source %}{{ t.source.name }} · {% endif %}{{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}
             </span>
-            <div class="flex-1 min-w-0">
-              <div class="font-medium text-brand-900 truncate not-italic">{{ t.category.name }}</div>
-              <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
-                <span class="truncate">{{ t.pocket.name }} · {{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}</span>
-                {% if t.installment_group %}<span class="chip shrink-0 not-italic">Cicilan {{ t.installment_index }}/{{ t.installment_total }}</span>{% endif %}
-                {% if is_planned > today_iso %}<span class="chip shrink-0 not-italic">Planned</span>{% endif %}
-              </div>
-            </div>
-            <div class="text-right shrink-0">
-              <div class="font-semibold num not-italic {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
-                {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
-              </div>
-              <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700 not-italic">Edit</a>
-            </div>
-          </li>
-          {% endwith %}
-        {% endwith %}
-      {% else %}
-        {% with tr=row.obj %}
-          <li class="flex items-center gap-3 px-4 py-3">
-            <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-brand-500">
-              <i data-lucide="arrow-left-right" class="icon"></i>
-            </span>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 text-brand-900">
-                <span class="font-medium truncate">{{ tr.from_pocket.name }}</span>
-                <i data-lucide="arrow-right" class="w-3 h-3 text-brand-600"></i>
-                <span class="font-medium truncate">{{ tr.to_pocket.name }}</span>
-              </div>
-              <div class="text-xs text-brand-600 truncate">
-                Transfer · {{ tr.occurred_on|date:"d M Y" }}{% if tr.notes %} · {{ tr.notes }}{% endif %}
-              </div>
-            </div>
-            <div class="text-right shrink-0">
-              <div class="font-semibold text-brand-700 num">{{ tr.amount|rupiah }}</div>
-              <a href="{% url 'transfers:edit' tr.id %}" class="text-[11px] text-brand-600 hover:text-brand-700">Edit</a>
-            </div>
-          </li>
-        {% endwith %}
-      {% endif %}
+            {% if t.recurring_rule_id %}<span class="chip shrink-0"><i data-lucide="repeat" class="w-3 h-3"></i> Auto</span>{% endif %}
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="font-semibold num {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
+            {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
+          </div>
+          {% if t.owner_id == user.id %}
+            <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700">Edit</a>
+          {% else %}
+            <span class="text-[11px] text-brand-500">{{ t.owner.profile.label }}</span>
+          {% endif %}
+        </div>
+      </li>
     {% endfor %}
   </ul>
 {% else %}

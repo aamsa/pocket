@@ -3,16 +3,15 @@ from datetime import date
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
-from apps.pockets.models import Pocket
-from apps.pockets.permissions import visible_pocket_ids
-from apps.transactions.models import Category
+from apps.transactions.models import Category, Source
 
 from .services import (
     PERIOD_CHOICES,
     income_vs_expense,
-    pocket_balances_over_time,
+    net_worth_over_time,
     resolve_period,
-    scope_pocket_ids,
+    scope_owner_ids,
+    source_breakdown,
     spending_by_category,
     top_transactions,
 )
@@ -29,49 +28,33 @@ def _parse_date(value):
 
 @login_required
 def index(request):
-    period_key = request.GET.get("period") or "last_7"
+    from apps.ledger.services import household_user_ids, user_household
+
+    period_key = request.GET.get("period") or "last_30"
     custom_start = _parse_date(request.GET.get("start"))
     custom_end = _parse_date(request.GET.get("end"))
     period = resolve_period(period_key, custom_start, custom_end)
 
-    pocket_id = request.GET.get("pocket") or None
-    include_children = request.GET.get("include_children") == "on"
+    person = request.GET.get("person") or "me"
     category_id = request.GET.get("category") or None
+    source_id = request.GET.get("source") or None
 
-    pocket_ids = scope_pocket_ids(request.user, pocket_id, include_children)
+    owner_ids = scope_owner_ids(request.user, person)
+    nw_user_ids = household_user_ids(request.user) if person == "household" else [request.user.id]
 
-    visible_pockets = (
-        Pocket.objects.filter(pk__in=visible_pocket_ids(request.user))
-        .select_related("owner", "owner__profile")
-        .order_by("name")
-    )
     available_categories = (
         Category.objects.for_user(request.user).active().order_by("kind", "name")
     )
-    chosen_category = None
-    if category_id:
-        chosen_category = next(
-            (c for c in available_categories if str(c.id) == category_id), None
-        )
-        if chosen_category is None:
-            category_id = None
+    available_sources = (
+        Source.objects.for_household(user_household(request.user)).active().order_by("name")
+    )
+    source_ids = [source_id] if source_id else None
 
-    if pocket_id:
-        chosen = next((p for p in visible_pockets if str(p.id) == pocket_id), None)
-        if chosen is not None:
-            balance_series_name = (
-                f"{chosen.name} (downstream)" if include_children else chosen.name
-            )
-        else:
-            balance_series_name = "Overall"
-    else:
-        balance_series_name = "Overall"
-
-    # The donut is moot when a single category is selected — skip it.
-    if category_id:
-        donut = {"has_data": False, "options": {}}
-    else:
-        donut = spending_by_category(request.user, period, pocket_ids)
+    donut = (
+        {"has_data": False, "options": {}}
+        if category_id
+        else spending_by_category(period, owner_ids=owner_ids, source_ids=source_ids)
+    )
 
     ctx = {
         "period_key": period_key,
@@ -79,22 +62,19 @@ def index(request):
         "period_choices": PERIOD_CHOICES,
         "custom_start": custom_start.isoformat() if custom_start else "",
         "custom_end": custom_end.isoformat() if custom_end else "",
-        "pocket_id": pocket_id,
-        "include_children": include_children,
+        "person": person,
         "category_id": category_id,
-        "chosen_category": chosen_category,
-        "visible_pockets": visible_pockets,
+        "source_id": source_id,
         "available_categories": available_categories,
+        "available_sources": available_sources,
         "income_vs_expense": income_vs_expense(
-            request.user, period, pocket_ids, category_id=category_id
+            period, owner_ids=owner_ids, source_ids=source_ids, category_id=category_id
         ),
         "spending_by_category": donut,
-        "pocket_balances": pocket_balances_over_time(
-            request.user, period, pocket_ids, series_name=balance_series_name
-        ),
-        "balance_series_name": balance_series_name,
+        "source_breakdown": source_breakdown(period, owner_ids=owner_ids),
+        "net_worth": net_worth_over_time(period, user_ids=nw_user_ids),
         "top_transactions": top_transactions(
-            request.user, period, pocket_ids, category_id=category_id
+            period, owner_ids=owner_ids, source_ids=source_ids, category_id=category_id
         ),
     }
     template = "reports/_panels.html" if request.headers.get("HX-Request") else "reports/index.html"

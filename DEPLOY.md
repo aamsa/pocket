@@ -55,6 +55,67 @@ systemctl status pocket --no-pager
 
 If the deploy was a no-op for migrations / static files (just a template / view tweak), you can skip those steps — `git pull && systemctl restart pocket` is enough. Always tail `journalctl -u pocket -f` for ~10 seconds after the restart to confirm there's no boot-time exception.
 
+## One-time: May 2026 revamp (fresh start)
+
+The revamp removed the pocket/transfer/sharing/credit-card models and replaced them with the income/expense ledger. There is **no data migration** — it's a clean reset. On the droplet, after pulling the revamp code:
+
+```bash
+ssh mydroplet
+cd /home/pocket/apps/pocket
+sudo -u pocket git pull
+sudo -u pocket .venv/bin/pip install -r requirements.txt
+systemctl stop pocket
+# Drop & recreate the application database (destroys old pocket/transfer data).
+sudo -u postgres psql -c "DROP DATABASE pocket;"
+sudo -u postgres psql -c "CREATE DATABASE pocket OWNER pocket;"
+sudo -u pocket bash -c 'set -a; . /etc/pocket.env; set +a; \
+  .venv/bin/tailwindcss -i static/css/input.css -o static/css/output.css --minify && \
+  .venv/bin/python manage.py migrate --noinput && \
+  .venv/bin/python manage.py collectstatic --noinput && \
+  .venv/bin/python manage.py createuser admin --superuser --display-name "Admin" --password "<pw>" && \
+  .venv/bin/python manage.py createuser wife --display-name "Wife" --password "<pw>" && \
+  .venv/bin/python manage.py seed_household admin wife'
+systemctl start pocket
+# Optional: seed today's snapshot so the net-worth chart has a baseline immediately.
+sudo -u pocket bash -c 'set -a; . /etc/pocket.env; set +a; .venv/bin/python manage.py snapshot_balances'
+```
+
+`migrate` auto-seeds the default categories + starter sources via a `post_migrate` signal; `seed_household` claims those sources for the household.
+
+## Scheduled jobs (systemd timers)
+
+Two nightly management commands keep the ledger current. Run them as the `pocket` user, sourcing `/etc/pocket.env`, **recurring first** so the day's auto-entries are included in the snapshot. Use `pocket-*` names so co-tenant services are untouched.
+
+`/etc/systemd/system/pocket-maintenance.service`:
+```ini
+[Unit]
+Description=Pocket nightly maintenance (recurring + snapshot)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=pocket
+WorkingDirectory=/home/pocket/apps/pocket
+EnvironmentFile=/etc/pocket.env
+ExecStart=/home/pocket/apps/pocket/.venv/bin/python manage.py run_recurring
+ExecStart=/home/pocket/apps/pocket/.venv/bin/python manage.py snapshot_balances
+```
+
+`/etc/systemd/system/pocket-maintenance.timer`:
+```ini
+[Unit]
+Description=Run Pocket maintenance nightly
+
+[Timer]
+OnCalendar=*-*-* 00:05:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable: `systemctl daemon-reload && systemctl enable --now pocket-maintenance.timer`. Check: `systemctl list-timers pocket-maintenance.timer` and `journalctl -u pocket-maintenance.service -n 50`. The timezone follows the droplet's (set to match Asia/Jakarta if needed). Both commands are idempotent, so a manual re-run or a `Persistent=true` catch-up after downtime is safe.
+
 ## Rollback
 
 ```bash

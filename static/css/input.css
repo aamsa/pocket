@@ -113,16 +113,11 @@
   }
 }
 
-/* Nested-pocket row indent. Per-level step is tighter on mobile so depth-3+
-   rows don't push the icon + name + balance + chevron off the viewport.
-   Wrapper sets `--depth: <n>` inline. */
-.depth-row {
-  padding-inline-start: calc(1rem + var(--depth, 0) * 0.75rem);
-}
-@media (min-width: 768px) {
-  .depth-row {
-    padding-inline-start: calc(1rem + var(--depth, 0) * 1.25rem);
-  }
+/* Subtle entrance for list rows (transaction log, budgets, goals, recurring).
+   Opacity-only fade so it degrades cleanly under reduced motion and re-runs
+   pleasantly on HTMX swaps. */
+.anim-row {
+  animation: fade-in 200ms var(--ease-snap) both;
 }
 
 /* HTMX swap fade so partials don't pop. Both phases use ease-snap;

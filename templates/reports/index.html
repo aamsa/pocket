@@ -27,14 +27,10 @@
       </label>
 
       <label class="flex flex-col gap-1.5 min-w-0">
-        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Pocket</span>
-        <select name="pocket" class="input">
-          <option value="">All pockets</option>
-          {% for p in visible_pockets %}
-            <option value="{{ p.id }}" {% if pocket_id == p.id|stringformat:'s' %}selected{% endif %}>
-              {{ p.name }}{% if p.owner_id != user.id %} · {{ p.owner.profile.label }}{% endif %}
-            </option>
-          {% endfor %}
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Who</span>
+        <select name="person" class="input">
+          <option value="me" {% if person == 'me' %}selected{% endif %}>Me</option>
+          <option value="household" {% if person == 'household' %}selected{% endif %}>Everyone</option>
         </select>
       </label>
 
@@ -50,6 +46,16 @@
         </select>
       </label>
 
+      <label class="flex flex-col gap-1.5 min-w-0">
+        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Source</span>
+        <select name="source" class="input">
+          <option value="">All sources</option>
+          {% for s in available_sources %}
+            <option value="{{ s.id }}" {% if source_id == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
       {% if period_key == 'custom' %}
         <label class="flex flex-col gap-1.5 min-w-0">
           <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">From</span>
@@ -60,12 +66,6 @@
           <input type="date" name="end" value="{{ custom_end }}" class="input" />
         </label>
       {% endif %}
-
-      <label class="inline-flex items-center gap-2 cursor-pointer text-sm text-brand-700 col-span-1 sm:col-span-2 md:col-span-4 md:mt-1">
-        <input type="checkbox" name="include_children" {% if include_children %}checked{% endif %}
-               class="w-4 h-4 rounded border-brand-300 text-brand-700 focus:ring-brand-300/40" />
-        Include sub-pockets
-      </label>
     </div>
   </form>
 

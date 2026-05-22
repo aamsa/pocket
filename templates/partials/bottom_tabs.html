@@ -7,27 +7,24 @@
       <i data-lucide="layout-dashboard" class="icon"></i>
       <span>Home</span>
     </a>
-    <a href="{% url 'pockets:index' %}"
+    <a href="{% url 'transactions:index' %}"
        class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
-              {% if '/pockets' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
-      <i data-lucide="wallet" class="icon"></i>
-      <span>Pockets</span>
+              {% if '/transactions' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
+      <i data-lucide="arrow-left-right" class="icon"></i>
+      <span>Activity</span>
     </a>
     <span aria-hidden="true"></span>
-    <a href="{% url 'reports:index' %}"
+    <a href="{% url 'ledger:budgets' %}"
        class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
-              {% if '/reports' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
-      <i data-lucide="chart-pie" class="icon"></i>
-      <span>Reports</span>
+              {% if '/ledger/budgets' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
+      <i data-lucide="target" class="icon"></i>
+      <span>Budgets</span>
     </a>
     <a href="{% url 'accounts:profile' %}"
-       class="relative flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
+       class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
               {% if '/accounts/settings' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
       <i data-lucide="user" class="icon"></i>
       <span>More</span>
-      {% if GLOBAL_PENDING_INVITES %}
-        <span class="absolute top-1 right-[calc(50%-1.25rem)] w-4 h-4 rounded-full bg-brand-700 text-brand-50 text-[10px] font-semibold grid place-items-center" aria-label="{{ GLOBAL_PENDING_INVITES }} pending invites">{{ GLOBAL_PENDING_INVITES }}</span>
-      {% endif %}
     </a>
   </div>
 </nav>

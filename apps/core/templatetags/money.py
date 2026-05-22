@@ -36,6 +36,15 @@ def abs_value(value):
         return 0
 
 
+@register.filter(name="index")
+def index(sequence, position):
+    """Return sequence[position] (for zipping parallel lists in templates)."""
+    try:
+        return sequence[int(position)]
+    except (IndexError, TypeError, ValueError, KeyError):
+        return ""
+
+
 @register.simple_tag
 def balance_key(*parts):
     """Build a colon-joined localStorage key for the balance toggle partial.

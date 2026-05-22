@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'new' %}New recurring{% else %}Edit recurring{% endif %} · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  {% include "partials/messages.html" %}
+
+  <div class="max-w-md mx-auto">
+    <div class="mb-5">
+      <a href="{% url 'ledger:recurring' %}" class="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-900">
+        <i data-lucide="arrow-left" class="icon"></i> Back
+      </a>
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900 mt-2">
+        {% if mode == 'new' %}New recurring entry{% else %}Edit recurring entry{% endif %}
+      </h1>
+    </div>
+
+    <form method="post" class="card p-5 md:p-6 flex flex-col gap-4"
+          x-data="{ cadence: '{{ form.cadence.value|default:'monthly' }}' }">
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.name == 'cadence' %}
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
+            <select name="cadence" x-model="cadence" class="{{ field.field.widget.attrs.class }}">
+              {% for value, label in field.field.choices %}
+                <option value="{{ value }}" {% if field.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+          </label>
+        {% elif field.name == 'anchor_day' %}
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium text-brand-700 uppercase tracking-wide" x-text="cadence === 'weekly' ? 'Weekday (0=Mon … 6=Sun)' : 'Day of month (1–28)'"></span>
+            {{ field }}
+            <span class="text-xs text-brand-600" x-show="cadence === 'weekly'" x-cloak>0 Mon · 1 Tue · 2 Wed · 3 Thu · 4 Fri · 5 Sat · 6 Sun</span>
+            {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+          </label>
+        {% else %}
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium text-brand-700 uppercase tracking-wide">{{ field.label }}</span>
+            {{ field }}
+            {% for err in field.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
+          </label>
+        {% endif %}
+      {% endfor %}
+      {% if form.non_field_errors %}
+        <div class="rounded-xl bg-expense/10 border border-expense/20 px-4 py-3 text-sm text-expense">{{ form.non_field_errors|first }}</div>
+      {% endif %}
+      <div class="flex flex-col gap-2 mt-2">
+        <button type="submit" class="btn-primary h-12">
+          <i data-lucide="check" class="icon"></i> {% if mode == 'new' %}Create{% else %}Save changes{% endif %}
+        </button>
+        {% if mode == 'edit' %}
+          <form method="post" action="{% url 'ledger:recurring_delete' rule.id %}" onsubmit="return confirm('Delete this recurring entry?');">{% csrf_token %}
+            <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
+              <i data-lucide="trash-2" class="icon"></i> Delete
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+{% endblock %}

@@ -22,6 +22,16 @@ DEFAULT_EXPENSE = [
     ("Other Expense", "ellipsis", "brand-200"),
 ]
 
+# Starter payment sources. Seeded with household=None; `seed_household`
+# assigns them to the household so both partners share one list.
+DEFAULT_SOURCES = [
+    ("Cash", "banknote", "brand-500"),
+    ("BCA", "landmark", "brand-700"),
+    ("GoPay", "smartphone", "brand-400"),
+    ("Card", "credit-card", "brand-600"),
+    ("Other", "ellipsis", "brand-300"),
+]
+
 
 @receiver(post_migrate)
 def seed_default_categories(sender, app_config, **kwargs):
@@ -31,16 +41,23 @@ def seed_default_categories(sender, app_config, **kwargs):
         CATEGORY_KIND_EXPENSE,
         CATEGORY_KIND_INCOME,
         Category,
+        Source,
     )
 
-    if Category.objects.filter(is_default=True).exists():
-        return
+    if not Category.objects.filter(is_default=True).exists():
+        rows = [
+            Category(name=n, kind=CATEGORY_KIND_INCOME, icon=icon, color_token=color, is_default=True)
+            for n, icon, color in DEFAULT_INCOME
+        ] + [
+            Category(name=n, kind=CATEGORY_KIND_EXPENSE, icon=icon, color_token=color, is_default=True)
+            for n, icon, color in DEFAULT_EXPENSE
+        ]
+        Category.objects.bulk_create(rows)
 
-    rows = [
-        Category(name=n, kind=CATEGORY_KIND_INCOME, icon=icon, color_token=color, is_default=True)
-        for n, icon, color in DEFAULT_INCOME
-    ] + [
-        Category(name=n, kind=CATEGORY_KIND_EXPENSE, icon=icon, color_token=color, is_default=True)
-        for n, icon, color in DEFAULT_EXPENSE
-    ]
-    Category.objects.bulk_create(rows)
+    if not Source.objects.exists():
+        Source.objects.bulk_create(
+            [
+                Source(name=n, icon=icon, color_token=color, household=None)
+                for n, icon, color in DEFAULT_SOURCES
+            ]
+        )

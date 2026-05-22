@@ -18,16 +18,8 @@ def _compute_static_version():
 
 
 def app_meta(request):
-    ctx = {
+    return {
         "APP_NAME": "Pocket",
         "APP_TAGLINE": "Mindful money for two",
-        "GLOBAL_PENDING_INVITES": 0,
         "STATIC_VERSION": _compute_static_version(),
     }
-    if request.user.is_authenticated:
-        from apps.pockets.models import SHARE_STATUS_PENDING, PocketShare
-
-        ctx["GLOBAL_PENDING_INVITES"] = PocketShare.objects.filter(
-            shared_with=request.user, status=SHARE_STATUS_PENDING
-        ).count()
-    return ctx

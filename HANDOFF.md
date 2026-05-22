@@ -19,6 +19,24 @@ This is the "you're picking the project up after a long break" document. It tell
   - `raypchl` / `raypchl` (member, display name "Ray")
 - **Latest deployed commit**: see `git log origin/main -1` after this hand-off lands
 
+## May 2026 revamp — income/expense ledger (READ THIS FIRST)
+
+The original model (a tree of **pockets** with **transfers** between them, **PocketShare** inheritance, and credit-card statement/due cycles with **installment** plans) was removed. It was too heavy — the transfer pass-through was painful to keep in sync with real accounts. Passes 1–10 below still describe the *motion/visual* system accurately, but their **domain-model** details (pockets, transfers, sharing, cards, cicilan) are obsolete.
+
+**What the app is now:** a flat **income/expense ledger**.
+
+- **Models** — `Category` + `Source` + `Transaction` in `apps/transactions`; `Household`, `HouseholdMember`, `Budget`, `Goal`, `RecurringRule`, `DailyBalanceSnapshot` in the new `apps/ledger`. `Transaction` has `owner`, `category`, nullable `source`, `kind`, `amount`, `occurred_on`, `notes`, nullable `recurring_rule`. No pocket FK, no installment fields, no Transfer model.
+- **Net worth** — `UserProfile.starting_balance` + `starting_balance_as_of`; `apps/ledger/services.py::current_balance` runs it forward; `DailyBalanceSnapshot` (written nightly by `snapshot_balances`) feeds the trend chart.
+- **Source** — an optional, household-shared, flat payment-method tag. Not a balance, not a tree, never a transfer.
+- **Household** — replaces PocketShare. One `HouseholdMember` per user; `household_user_ids` / `scope_owner_ids` scope combined views. Seeded by the `seed_household` command.
+- **Budgets** — monthly per-category limits with a pace signal (`budget_status`). **Goals** — target + mutable `current_amount` (`goal_status`). **Recurring** — `RecurringRule` materialised by `run_recurring` (`materialize_recurring`), stamping `Transaction.recurring_rule` (renders an **Auto** chip).
+- **Dashboard** is the headline: filterable (period / category / source / person) net-worth hero, income-vs-expense, category & source donuts, budget pace, goal progress, latest activity. Reports page reuses the same builders.
+- **Scheduling** — two nightly `pocket-*` systemd timers (`run_recurring` then `snapshot_balances`); see DEPLOY.md. No n8n.
+- **Data** — fresh start, no migration. Migration history for `transactions`/`ledger` was reset; `accounts` got an additive `0002`.
+- **Load-bearing** — the `balance.html` eye-toggle + `.chart-mask` curtain now wrap the **net-worth** figure/chart (key `pocket-balance-vis:dashboard:networth`); `current_balance` must filter `occurred_on >= starting_balance_as_of`; the net-worth trend is empty until `snapshot_balances` has run at least once.
+
+The sections below are the original build history, kept for the motion/visual rationale.
+
 ## What got built (chronological)
 
 ### Pass 1 — Emil-style motion polish

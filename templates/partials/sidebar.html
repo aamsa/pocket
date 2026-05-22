@@ -6,15 +6,25 @@
               {% if path == '/' %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
       <i data-lucide="layout-dashboard" class="icon"></i> Dashboard
     </a>
-    <a href="{% url 'pockets:index' %}"
-       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium active:scale-[.98] transition-transform duration-100 ease-snap
-              {% if '/pockets' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
-      <i data-lucide="wallet" class="icon"></i> Pockets
-    </a>
     <a href="{% url 'transactions:index' %}"
        class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium active:scale-[.98] transition-transform duration-100 ease-snap
               {% if '/transactions' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
       <i data-lucide="arrow-left-right" class="icon"></i> Transactions
+    </a>
+    <a href="{% url 'ledger:budgets' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium active:scale-[.98] transition-transform duration-100 ease-snap
+              {% if '/ledger/budgets' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="target" class="icon"></i> Budgets
+    </a>
+    <a href="{% url 'ledger:goals' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium active:scale-[.98] transition-transform duration-100 ease-snap
+              {% if '/ledger/goals' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="flag" class="icon"></i> Goals
+    </a>
+    <a href="{% url 'ledger:recurring' %}"
+       class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium active:scale-[.98] transition-transform duration-100 ease-snap
+              {% if '/ledger/recurring' in path %}bg-brand-200/70 text-brand-900{% else %}text-brand-700 hover:bg-brand-100/70{% endif %}">
+      <i data-lucide="repeat" class="icon"></i> Recurring
     </a>
     <a href="{% url 'reports:index' %}"
        class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium active:scale-[.98] transition-transform duration-100 ease-snap
@@ -31,9 +41,6 @@
       </a>
       <a href="{% url 'transactions:new' %}?kind=expense" class="btn-secondary justify-start">
         <i data-lucide="trending-down" class="icon text-expense"></i> Add expense
-      </a>
-      <a href="{% url 'transfers:new' %}" class="btn-secondary justify-start">
-        <i data-lucide="arrow-left-right" class="icon"></i> Transfer
       </a>
     </div>
   </div>

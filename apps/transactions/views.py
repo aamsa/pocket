@@ -1,86 +1,49 @@
-from datetime import date
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
-from apps.pockets.permissions import can_manage, can_view
-
 from .forms import (
     CategoryForm,
+    SourceForm,
     TransactionFilterForm,
     TransactionForm,
-    TransferForm,
 )
-from .models import Category, Transaction, Transfer
+from .models import Category, Source, Transaction
 
 
-PAGE_SIZE = 25
-
-
-def _ensure_can_manage(user, pocket):
-    if not can_manage(user, pocket):
-        raise PermissionDenied
-
-
-def _ensure_can_view(user, pocket):
-    if not can_view(user, pocket):
-        raise PermissionDenied
+PAGE_SIZE = 50
 
 
 @login_required
 def index(request):
+    from apps.ledger.services import household_user_ids
+
     form = TransactionFilterForm(request.GET or None, user=request.user)
     cleaned = form.cleaned_data if form.is_valid() else {}
 
-    from apps.pockets.permissions import visible_pocket_ids
+    person = cleaned.get("person") or "me"
+    owner_ids = household_user_ids(request.user) if person == "household" else [request.user.id]
 
-    visible_ids = visible_pocket_ids(request.user)
-    txn_qs = Transaction.objects.filter(pocket_id__in=visible_ids).select_related(
-        "pocket", "category", "created_by"
+    qs = Transaction.objects.filter(owner_id__in=owner_ids).select_related(
+        "source", "category", "owner", "owner__profile", "recurring_rule"
     )
-    transfer_qs = Transfer.objects.filter(
-        Q(from_pocket_id__in=visible_ids) | Q(to_pocket_id__in=visible_ids)
-    ).select_related("from_pocket", "to_pocket", "created_by")
-
     if cleaned.get("start"):
-        txn_qs = txn_qs.filter(occurred_on__gte=cleaned["start"])
-        transfer_qs = transfer_qs.filter(occurred_on__gte=cleaned["start"])
+        qs = qs.filter(occurred_on__gte=cleaned["start"])
     if cleaned.get("end"):
-        txn_qs = txn_qs.filter(occurred_on__lte=cleaned["end"])
-        transfer_qs = transfer_qs.filter(occurred_on__lte=cleaned["end"])
-    if not cleaned.get("show_planned"):
-        today = date.today()
-        txn_qs = txn_qs.filter(occurred_on__lte=today)
-        transfer_qs = transfer_qs.filter(occurred_on__lte=today)
-    if cleaned.get("pocket"):
-        p = cleaned["pocket"]
-        txn_qs = txn_qs.filter(pocket=p)
-        transfer_qs = transfer_qs.filter(Q(from_pocket=p) | Q(to_pocket=p))
+        qs = qs.filter(occurred_on__lte=cleaned["end"])
+    if cleaned.get("kind"):
+        qs = qs.filter(kind=cleaned["kind"])
     if cleaned.get("category"):
-        txn_qs = txn_qs.filter(category=cleaned["category"])
-        transfer_qs = transfer_qs.none()
+        qs = qs.filter(category=cleaned["category"])
+    if cleaned.get("source"):
+        qs = qs.filter(source=cleaned["source"])
 
-    kind = cleaned.get("kind")
-    if kind == "income" or kind == "expense":
-        txn_qs = txn_qs.filter(kind=kind)
-        transfer_qs = transfer_qs.none()
-    elif kind == "transfer":
-        txn_qs = txn_qs.none()
-
-    rows = []
-    for t in txn_qs[: PAGE_SIZE * 2]:
-        rows.append({"type": "txn", "occurred_on": t.occurred_on, "obj": t})
-    for tr in transfer_qs[: PAGE_SIZE * 2]:
-        rows.append({"type": "transfer", "occurred_on": tr.occurred_on, "obj": tr})
-    rows.sort(key=lambda r: (r["occurred_on"], getattr(r["obj"], "created_at", None)), reverse=True)
-    rows = rows[:PAGE_SIZE]
+    txns = list(qs.order_by("-occurred_on", "-created_at")[:PAGE_SIZE])
 
     template = "transactions/_list.html" if request.headers.get("HX-Request") else "transactions/index.html"
-    return render(request, template, {"form": form, "rows": rows})
+    return render(request, template, {"form": form, "txns": txns})
 
 
 @login_required
@@ -90,17 +53,14 @@ def new(request):
     if request.method == "POST":
         form = TransactionForm(request.POST, user=request.user, kind=kind)
         if form.is_valid():
-            _ensure_can_manage(request.user, form.cleaned_data["pocket"])
             txn = form.save()
-            messages.success(
-                request,
-                f"{txn.get_kind_display()} of {txn.amount:,.0f} saved.".replace(",", "."),
-            )
+            amount = f"{txn.amount:,.0f}".replace(",", ".")
+            messages.success(request, f"{txn.get_kind_display()} of Rp {amount} saved.")
             return redirect("transactions:index")
     else:
         initial = {}
-        if request.GET.get("pocket"):
-            initial["pocket"] = request.GET["pocket"]
+        if request.GET.get("source"):
+            initial["source"] = request.GET["source"]
         form = TransactionForm(user=request.user, kind=kind, initial=initial)
     return render(
         request,
@@ -112,14 +72,10 @@ def new(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def edit(request, txn_id):
-    txn = get_object_or_404(
-        Transaction.objects.select_related("pocket"), pk=txn_id
-    )
-    _ensure_can_manage(request.user, txn.pocket)
+    txn = get_object_or_404(Transaction, pk=txn_id, owner=request.user)
     if request.method == "POST":
         form = TransactionForm(request.POST, instance=txn, user=request.user, kind=txn.kind)
         if form.is_valid():
-            _ensure_can_manage(request.user, form.cleaned_data["pocket"])
             form.save()
             messages.success(request, "Transaction updated.")
             return redirect("transactions:index")
@@ -135,70 +91,9 @@ def edit(request, txn_id):
 @login_required
 @require_http_methods(["POST"])
 def delete(request, txn_id):
-    txn = get_object_or_404(Transaction.objects.select_related("pocket"), pk=txn_id)
-    _ensure_can_manage(request.user, txn.pocket)
+    txn = get_object_or_404(Transaction, pk=txn_id, owner=request.user)
     txn.delete()
     messages.success(request, "Transaction deleted.")
-    return redirect("transactions:index")
-
-
-# --- Transfers --------------------------------------------------------------
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def transfer_new(request):
-    if request.method == "POST":
-        form = TransferForm(request.POST, user=request.user)
-        if form.is_valid():
-            _ensure_can_manage(request.user, form.cleaned_data["from_pocket"])
-            _ensure_can_manage(request.user, form.cleaned_data["to_pocket"])
-            form.save()
-            messages.success(request, "Transfer recorded.")
-            return redirect("transactions:index")
-    else:
-        initial = {}
-        if request.GET.get("from"):
-            initial["from_pocket"] = request.GET["from"]
-        if request.GET.get("to"):
-            initial["to_pocket"] = request.GET["to"]
-        if request.GET.get("amount"):
-            initial["amount"] = request.GET["amount"]
-        form = TransferForm(user=request.user, initial=initial)
-    return render(request, "transfers/form.html", {"form": form, "mode": "new"})
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def transfer_edit(request, transfer_id):
-    transfer = get_object_or_404(Transfer.objects.select_related("from_pocket", "to_pocket"), pk=transfer_id)
-    _ensure_can_manage(request.user, transfer.from_pocket)
-    _ensure_can_manage(request.user, transfer.to_pocket)
-    if request.method == "POST":
-        form = TransferForm(request.POST, instance=transfer, user=request.user)
-        if form.is_valid():
-            _ensure_can_manage(request.user, form.cleaned_data["from_pocket"])
-            _ensure_can_manage(request.user, form.cleaned_data["to_pocket"])
-            form.save()
-            messages.success(request, "Transfer updated.")
-            return redirect("transactions:index")
-    else:
-        form = TransferForm(instance=transfer, user=request.user)
-    return render(
-        request,
-        "transfers/form.html",
-        {"form": form, "mode": "edit", "transfer": transfer},
-    )
-
-
-@login_required
-@require_http_methods(["POST"])
-def transfer_delete(request, transfer_id):
-    transfer = get_object_or_404(Transfer.objects.select_related("from_pocket", "to_pocket"), pk=transfer_id)
-    _ensure_can_manage(request.user, transfer.from_pocket)
-    _ensure_can_manage(request.user, transfer.to_pocket)
-    transfer.delete()
-    messages.success(request, "Transfer deleted.")
     return redirect("transactions:index")
 
 
@@ -249,3 +144,69 @@ def category_edit(request, category_id):
         "categories/form.html",
         {"form": form, "mode": "edit", "category": category},
     )
+
+
+# --- Sources ----------------------------------------------------------------
+
+
+@login_required
+def sources_index(request):
+    from apps.ledger.services import user_household
+
+    sources = (
+        Source.objects.for_household(user_household(request.user)).active().order_by("name")
+    )
+    return render(request, "sources/index.html", {"sources": sources})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def source_new(request):
+    if request.method == "POST":
+        form = SourceForm(request.POST, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Source created.")
+            return redirect("transactions:sources")
+    else:
+        form = SourceForm(user=request.user)
+    return render(request, "sources/form.html", {"form": form, "mode": "new"})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def source_edit(request, source_id):
+    from apps.ledger.services import user_household
+
+    source = get_object_or_404(Source, pk=source_id)
+    if source.household_id != getattr(user_household(request.user), "id", None):
+        raise PermissionDenied
+    if request.method == "POST":
+        form = SourceForm(request.POST, instance=source, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Source updated.")
+            return redirect("transactions:sources")
+    else:
+        form = SourceForm(instance=source, user=request.user)
+    return render(
+        request,
+        "sources/form.html",
+        {"form": form, "mode": "edit", "source": source},
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def source_archive(request, source_id):
+    from django.utils import timezone
+
+    from apps.ledger.services import user_household
+
+    source = get_object_or_404(Source, pk=source_id)
+    if source.household_id != getattr(user_household(request.user), "id", None):
+        raise PermissionDenied
+    source.archived_at = timezone.now()
+    source.save(update_fields=["archived_at", "updated_at"])
+    messages.success(request, "Source archived.")
+    return redirect("transactions:sources")

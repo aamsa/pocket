@@ -2,7 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
-from django.db.models import CheckConstraint, F, Q
+from django.db.models import CheckConstraint, Q
 
 
 CATEGORY_KIND_INCOME = "income"
@@ -87,7 +87,68 @@ class Category(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# Transactions
+# Sources — an optional flat "where the money sits/comes from" tag.
+# NOT an account with a balance, NOT a tree, NO transfers. Just a label,
+# shared across the household so both partners pick from one list.
+# ---------------------------------------------------------------------------
+
+SOURCE_ICON_CHOICES = [
+    ("wallet", "Wallet"),
+    ("banknote", "Cash"),
+    ("coins", "Coins"),
+    ("credit-card", "Card"),
+    ("landmark", "Bank"),
+    ("smartphone", "E-wallet"),
+    ("building-2", "Institution"),
+    ("piggy-bank", "Savings"),
+    ("ellipsis", "Other"),
+]
+
+
+class SourceQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(archived_at__isnull=True)
+
+    def for_household(self, household):
+        if household is None:
+            return self.filter(household__isnull=True)
+        return self.filter(household=household)
+
+
+class Source(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=40)
+    icon = models.CharField(max_length=40, default="wallet", choices=SOURCE_ICON_CHOICES)
+    color_token = models.CharField(max_length=20, default="brand-500", choices=CATEGORY_COLOR_CHOICES)
+    household = models.ForeignKey(
+        "ledger.Household",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="sources",
+    )
+    archived_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SourceQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household", "name"],
+                name="source_unique_name_per_household",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------------------------------------------------------------------------
+# Transactions — the whole core. Income or expense, owned by a person,
+# tagged with a category and (optionally) a source.
 # ---------------------------------------------------------------------------
 
 TXN_KIND_INCOME = "income"
@@ -100,10 +161,14 @@ TXN_KIND_CHOICES = [
 
 class TransactionQuerySet(models.QuerySet):
     def for_user(self, user):
-        """Transactions in any pocket the user can view (owned or shared)."""
-        from apps.pockets.permissions import visible_pocket_ids
+        """Transactions owned by a single user."""
+        return self.filter(owner=user)
 
-        return self.filter(pocket_id__in=visible_pocket_ids(user))
+    def for_household(self, user):
+        """Transactions owned by anyone in the user's household."""
+        from apps.ledger.services import household_user_ids
+
+        return self.filter(owner_id__in=household_user_ids(user))
 
     def in_period(self, start, end):
         qs = self
@@ -116,22 +181,30 @@ class TransactionQuerySet(models.QuerySet):
 
 class Transaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    pocket = models.ForeignKey(
-        "pockets.Pocket", on_delete=models.PROTECT, related_name="transactions"
-    )
     kind = models.CharField(max_length=8, choices=TXN_KIND_CHOICES)
     amount = models.DecimalField(max_digits=14, decimal_places=0)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name="transactions")
+    source = models.ForeignKey(
+        Source,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
     occurred_on = models.DateField()
     notes = models.CharField(max_length=500, blank=True)
-    created_by = models.ForeignKey(
+    owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name="transactions_created",
+        related_name="transactions",
     )
-    installment_group = models.UUIDField(null=True, blank=True, db_index=True)
-    installment_index = models.PositiveSmallIntegerField(null=True, blank=True)
-    installment_total = models.PositiveSmallIntegerField(null=True, blank=True)
+    recurring_rule = models.ForeignKey(
+        "ledger.RecurringRule",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -140,70 +213,17 @@ class Transaction(models.Model):
     class Meta:
         ordering = ["-occurred_on", "-created_at"]
         indexes = [
-            models.Index(fields=["pocket", "-occurred_on"]),
+            models.Index(fields=["owner", "-occurred_on"]),
             models.Index(fields=["category", "-occurred_on"]),
+            models.Index(fields=["source", "-occurred_on"]),
         ]
         constraints = [
             CheckConstraint(condition=Q(amount__gt=0), name="txn_amount_positive"),
-            CheckConstraint(
-                condition=(
-                    Q(
-                        installment_group__isnull=True,
-                        installment_index__isnull=True,
-                        installment_total__isnull=True,
-                    )
-                    | Q(
-                        installment_group__isnull=False,
-                        installment_index__gte=1,
-                        installment_total__gte=2,
-                        installment_total__lte=36,
-                    )
-                ),
-                name="txn_installment_consistent",
-            ),
         ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} {self.amount} ({self.occurred_on})"
 
     @property
     def signed_amount(self):
         return self.amount if self.kind == TXN_KIND_INCOME else -self.amount
-
-
-# ---------------------------------------------------------------------------
-# Transfers
-# ---------------------------------------------------------------------------
-
-
-class Transfer(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    from_pocket = models.ForeignKey(
-        "pockets.Pocket", on_delete=models.PROTECT, related_name="transfers_out"
-    )
-    to_pocket = models.ForeignKey(
-        "pockets.Pocket", on_delete=models.PROTECT, related_name="transfers_in"
-    )
-    amount = models.DecimalField(max_digits=14, decimal_places=0)
-    occurred_on = models.DateField()
-    notes = models.CharField(max_length=500, blank=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="transfers_created",
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["-occurred_on", "-created_at"]
-        indexes = [
-            models.Index(fields=["from_pocket", "-occurred_on"]),
-            models.Index(fields=["to_pocket", "-occurred_on"]),
-        ]
-        constraints = [
-            CheckConstraint(condition=Q(amount__gt=0), name="transfer_amount_positive"),
-            CheckConstraint(
-                condition=~Q(from_pocket=F("to_pocket")),
-                name="transfer_pockets_distinct",
-            ),
-        ]
-
-
