@@ -1,12 +1,19 @@
-from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from django.contrib import messages
 
-from .forms import BrandedPasswordChangeForm, LoginForm, ProfileForm
+from .decorators import superuser_required
+from .forms import (
+    AdminUserCreateForm,
+    BrandedPasswordChangeForm,
+    BrandedSetPasswordForm,
+    LoginForm,
+    ProfileForm,
+)
 
 
 @require_http_methods(["GET", "POST"])
@@ -56,3 +63,54 @@ def profile_view(request):
         messages.success(request, "Profile updated.")
         return redirect("accounts:profile")
     return render(request, "settings/profile.html", {"form": form})
+
+
+# --- Superadmin: user management --------------------------------------------
+
+
+@login_required
+@superuser_required
+def users_index(request):
+    from apps.ledger.services import user_household
+
+    users = get_user_model().objects.select_related("profile").order_by("username")
+    rows = [{"u": u, "household": user_household(u)} for u in users]
+    return render(request, "accounts/users/index.html", {"rows": rows})
+
+
+@login_required
+@superuser_required
+@require_http_methods(["GET", "POST"])
+def user_new(request):
+    form = AdminUserCreateForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        messages.success(
+            request,
+            f"User '{user.username}' created. They'll be asked to set their own password on first login.",
+        )
+        return redirect("accounts:users")
+    return render(request, "accounts/users/form.html", {"form": form, "mode": "new"})
+
+
+@login_required
+@superuser_required
+@require_http_methods(["GET", "POST"])
+def user_set_password(request, user_id):
+    target = get_object_or_404(get_user_model(), pk=user_id)
+    form = BrandedSetPasswordForm(target, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        profile = target.profile
+        profile.force_password_change = True
+        profile.save(update_fields=["force_password_change"])
+        messages.success(
+            request,
+            f"Password reset for '{target.username}'. They'll be asked to change it on next login.",
+        )
+        return redirect("accounts:users")
+    return render(
+        request,
+        "accounts/users/form.html",
+        {"form": form, "mode": "password", "target": target},
+    )

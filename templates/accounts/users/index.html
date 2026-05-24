@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Users · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  {% include "partials/messages.html" %}
+
+  <div class="max-w-md mx-auto">
+    <div class="flex items-end justify-between gap-3 mb-5">
+      <div class="min-w-0 flex-1">
+        <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900">Users</h1>
+        <p class="text-sm text-brand-600 mt-1">Everyone with an account. Superuser only.</p>
+      </div>
+      <a href="{% url 'accounts:user_new' %}" class="btn-primary shrink-0">
+        <i data-lucide="user-plus" class="icon"></i>
+        <span class="hidden md:inline">New user</span>
+      </a>
+    </div>
+
+    <ul class="card divide-y divide-brand-100 overflow-hidden">
+      {% for row in rows %}
+        <li class="flex items-center gap-3 px-4 py-3 anim-row">
+          <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-brand-600 font-semibold text-sm">
+            {{ row.u.profile.label|slice:":1"|upper }}
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-brand-900 truncate">
+              {{ row.u.profile.label }}{% if row.u == user %} <span class="text-xs text-brand-500">· you</span>{% endif %}
+            </div>
+            <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
+              <span class="truncate">@{{ row.u.username }}{% if row.household %} · {{ row.household.name }}{% endif %}</span>
+              {% if row.u.is_superuser %}<span class="chip shrink-0">Superuser</span>{% endif %}
+              {% if not row.u.is_active %}<span class="chip shrink-0">Disabled</span>{% endif %}
+            </div>
+          </div>
+          <a href="{% url 'accounts:user_set_password' row.u.id %}" class="text-[11px] text-brand-600 hover:text-brand-900 shrink-0">Set password</a>
+        </li>
+      {% endfor %}
+    </ul>
+
+    <a href="{% url 'accounts:profile' %}" class="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-900 mt-4">
+      <i data-lucide="arrow-left" class="icon"></i> Back to settings
+    </a>
+  </div>
+{% endblock %}

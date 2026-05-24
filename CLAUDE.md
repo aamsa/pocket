@@ -31,10 +31,11 @@ The project's recommended skills are pinned in `skills-lock.json` (committed). T
 
 ```
 config/settings/{base,dev,prod}.py     dev defaults to settings.dev via manage.py
-apps/accounts/                         auth, UserProfile (display name), force-password-change, mgmt commands
+apps/accounts/                         auth, UserProfile (display name), force-password-change, mgmt commands,
+                                         superadmin Users pages (list/create/set-password) + superuser_required decorator
 apps/transactions/                     Category, Transaction; their forms/views/urls; default-data seeding signal
-apps/ledger/                           Household, HouseholdMember, Budget, Goal, RecurringRule;
-                                         services.py (recurring, budget, goal); management commands
+apps/ledger/                           Household (+ head), HouseholdMember, Budget, Goal, RecurringRule;
+                                         services.py (recurring, budget, goal, household head); Manage-My-Family views; mgmt commands
 apps/reports/                          period filter + ApexCharts builders (income/expense, category) + period_totals
 apps/core/                             dashboard, money template tags (rupiah, abs_value, index), context processor
 templates/                             project-level (base.html + partials/, page templates)
@@ -71,7 +72,7 @@ python manage.py migrate
 # user + household management (no web UI — superuser only)
 python manage.py createuser <username> [--superuser] [--display-name "..."] [--password "..."]
 python manage.py setpassword <username>
-python manage.py seed_household <username> [<username> ...] [--name "Household"]
+python manage.py seed_household <username> [<username> ...] [--name "Household"]   # first user becomes the head
 
 # scheduled jobs (run nightly in prod; manual in dev)
 python manage.py run_recurring [--date YYYY-MM-DD]        # materialise due recurring rules
@@ -84,6 +85,7 @@ python manage.py run_recurring [--date YYYY-MM-DD]        # materialise due recu
 - **UUID primary keys** on every domain model (Category, Transaction, Household, HouseholdMember, Budget, Goal, RecurringRule).
 - **Ownership, not permissions.** Each `Transaction` has an `owner` (the person whose money it is). Scope a single user's data with `Transaction.objects.for_user(user)`; scope the whole household with `.for_household(user)`. There is no permission decorator and no per-object sharing — household membership is the only sharing mechanism.
 - **Household scoping.** `apps.ledger.services.household_user_ids(user)` is the canonical way to get the set of user ids in a combined view (returns `[user.id]` if the user isn't in a household). `household_members(user)` returns the User objects. `apps.reports.services.scope_owner_ids(user, person)` resolves a `person` filter value (`"me"` | `"household"` | a specific user id) into owner ids for charts. A user belongs to exactly one `Household` via the `HouseholdMember` OneToOne; seed it with `seed_household`.
+- **Household head + management UIs.** `Household.head` (nullable FK to a member, backfilled to the earliest member by `ledger/migrations/0004`) marks who may manage the family. `apps.ledger.services.is_household_head(user)` / `household_head(user)` gate the **Manage My Family** page (`ledger:family`): any member views the roster; only the head adds members (by exact username; blocked if they're already in another family), removes members (never the head), and renames. `seed_household` sets the head to the first listed user. **Superadmin Users** (`accounts:users`, gated by `apps.accounts.decorators.superuser_required` → 403 for non-supers) lists every account, creates users, and resets passwords — reusing the `createuser`/`setpassword` logic; created/reset users get `force_password_change=True`. Both are linked from Settings ("Manage users" only when `user.is_superuser`). These are custom pages, not Django admin.
 - **Default categories** are seeded by a `post_migrate` signal in `apps.transactions.signals` (idempotent). Don't let users edit default categories — gate edits on `is_default=False AND created_by==user`.
 - **Forms get a `user=` kwarg** so they can scope querysets and stamp `owner`/`created_by`/`household`. Don't read `request.user` inside a form. Unique constraints that span fields set in `save()` (Budget `(user, category, month)`) are validated in the form's `clean()` so a duplicate shows a friendly error instead of a 500.
 - **HTMX swap pattern**: views check `request.headers.get("HX-Request")` and return the inner partial vs the full page from the same view function. Dashboard → `dashboard/_panels.html`; transactions → `transactions/_list.html`; reports → `reports/_panels.html`. Filter forms `hx-get` the same view with `hx-push-url="true"`.

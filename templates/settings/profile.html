@@ -56,6 +56,19 @@
         <span class="flex-1 text-brand-900">Categories</span>
         <i data-lucide="chevron-right" class="icon text-brand-500"></i>
       </a>
+      <a href="{% url 'ledger:family' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
+        <i data-lucide="users" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">Manage My Family</span>
+        <i data-lucide="chevron-right" class="icon text-brand-500"></i>
+      </a>
+      {% if user.is_superuser %}
+      <a href="{% url 'accounts:users' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
+        <i data-lucide="users-round" class="icon text-brand-600"></i>
+        <span class="flex-1 text-brand-900">Manage users</span>
+        <span class="chip shrink-0">Admin</span>
+        <i data-lucide="chevron-right" class="icon text-brand-500"></i>
+      </a>
+      {% endif %}
       <a href="{% url 'accounts:change_password' %}" class="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap text-sm">
         <i data-lucide="key-round" class="icon text-brand-600"></i>
         <span class="flex-1 text-brand-900">Change password</span>

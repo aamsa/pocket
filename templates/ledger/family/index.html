@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Manage My Family · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  {% include "partials/messages.html" %}
+
+  <div class="max-w-md mx-auto">
+    {% if household %}
+      <div class="mb-5">
+        <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900 truncate">{{ household.name }}</h1>
+        <p class="text-sm text-brand-600 mt-1">
+          {{ member_rows|length }} member{{ member_rows|length|pluralize }}{% if not is_head %} · only the head can manage{% endif %}
+        </p>
+      </div>
+
+      <ul class="card divide-y divide-brand-100 overflow-hidden">
+        {% for row in member_rows %}
+          <li class="flex items-center gap-3 px-4 py-3 anim-row">
+            <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-brand-600 font-semibold text-sm">
+              {{ row.user.profile.label|slice:":1"|upper }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-brand-900 truncate">
+                {{ row.user.profile.label }}{% if row.is_me %} <span class="text-xs text-brand-500">· you</span>{% endif %}
+              </div>
+              <div class="text-xs text-brand-600 truncate">@{{ row.user.username }}</div>
+            </div>
+            {% if row.is_head %}
+              <span class="chip shrink-0"><i data-lucide="crown" class="w-3 h-3"></i> Head</span>
+            {% elif is_head %}
+              <form method="post" action="{% url 'ledger:family_remove_member' row.membership.id %}"
+                    onsubmit="return confirm('Remove {{ row.user.profile.label }} from the family?');">{% csrf_token %}
+                <button type="submit" class="text-[11px] text-brand-600 hover:text-expense shrink-0">Remove</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if is_head %}
+        <div class="card p-5 md:p-6 mt-4">
+          <h2 class="text-base font-semibold text-brand-900 mb-3">Add a member</h2>
+          <form method="post" action="{% url 'ledger:family_add_member' %}" class="flex items-end gap-2">
+            {% csrf_token %}
+            <label class="flex-1 flex flex-col gap-1.5 min-w-0">
+              <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Username</span>
+              {{ add_form.username }}
+            </label>
+            <button type="submit" class="btn-primary shrink-0" aria-label="Add member">
+              <i data-lucide="user-plus" class="icon"></i>
+            </button>
+          </form>
+          <p class="text-xs text-brand-600 mt-2">They must already have an account. Ask an admin to create one first.</p>
+        </div>
+
+        <form method="post" action="{% url 'ledger:family_rename' %}" class="card p-5 md:p-6 mt-4 flex items-end gap-2">
+          {% csrf_token %}
+          <label class="flex-1 flex flex-col gap-1.5 min-w-0">
+            <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Family name</span>
+            {{ rename_form.name }}
+          </label>
+          <button type="submit" class="btn-secondary shrink-0">Rename</button>
+        </form>
+      {% endif %}
+    {% else %}
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-brand-900 mb-5">My Family</h1>
+      <div class="card p-10 text-center text-sm text-brand-600">
+        <i data-lucide="users" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
+        <p>You're not part of a family yet.<br>Ask an admin to add you to one.</p>
+      </div>
+    {% endif %}
+
+    <a href="{% url 'accounts:profile' %}" class="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-brand-900 mt-4">
+      <i data-lucide="arrow-left" class="icon"></i> Back to settings
+    </a>
+  </div>
+{% endblock %}

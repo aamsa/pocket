@@ -17,6 +17,16 @@ from apps.transactions.models import TXN_KIND_CHOICES
 class Household(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=60, default="Household")
+    # The member who may manage the family (add/remove members, rename). Nullable
+    # so deleting the head's user doesn't cascade the household; backfilled to the
+    # earliest member by migration 0004.
+    head = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="headed_households",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

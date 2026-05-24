@@ -1,10 +1,11 @@
 from datetime import date, timedelta
 
 from django import forms
+from django.contrib.auth import get_user_model
 
 from apps.transactions.models import Category
 
-from .models import CADENCE_WEEKLY, Budget, Goal, RecurringRule
+from .models import CADENCE_WEEKLY, Budget, Goal, Household, RecurringRule
 from .services import _clamp_day_to_month, _shift_month
 
 
@@ -161,3 +162,48 @@ class RecurringRuleForm(forms.ModelForm):
             return candidate
         year, month = _shift_month(today, 1)
         return _clamp_day_to_month(year, month, rule.anchor_day)
+
+
+# --- Manage My Family --------------------------------------------------------
+
+
+class AddMemberForm(forms.Form):
+    username = forms.CharField(
+        max_length=150,
+        label="Add by username",
+        widget=forms.TextInput(
+            attrs={"class": input_class, "autocomplete": "off", "placeholder": "their username"}
+        ),
+    )
+
+    def __init__(self, *args, household=None, **kwargs):
+        self.household = household
+        self.user_to_add = None
+        super().__init__(*args, **kwargs)
+
+    def clean_username(self):
+        from .models import HouseholdMember
+
+        username = self.cleaned_data["username"].strip()
+        user = get_user_model().objects.filter(username__iexact=username).first()
+        if user is None:
+            raise forms.ValidationError("No user with that username.")
+        membership = HouseholdMember.objects.filter(user=user).select_related("household").first()
+        if membership is not None:
+            if self.household and membership.household_id == self.household.id:
+                raise forms.ValidationError("They're already in this family.")
+            raise forms.ValidationError("That user is already in another family.")
+        self.user_to_add = user
+        return username
+
+    def save(self):
+        from .models import HouseholdMember
+
+        return HouseholdMember.objects.create(user=self.user_to_add, household=self.household)
+
+
+class RenameHouseholdForm(forms.ModelForm):
+    class Meta:
+        model = Household
+        fields = ["name"]
+        widgets = {"name": forms.TextInput(attrs={"class": input_class})}

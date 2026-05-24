@@ -3,14 +3,29 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .forms import BudgetForm, GoalContributeForm, GoalForm, RecurringRuleForm
-from .models import Budget, Goal, RecurringRule
-from .services import _shift_month, budget_status, goal_status, month_start
+from .forms import (
+    AddMemberForm,
+    BudgetForm,
+    GoalContributeForm,
+    GoalForm,
+    RecurringRuleForm,
+    RenameHouseholdForm,
+)
+from .models import Budget, Goal, HouseholdMember, RecurringRule
+from .services import (
+    _shift_month,
+    budget_status,
+    goal_status,
+    is_household_head,
+    month_start,
+    user_household,
+)
 
 
 def _parse_month(value):
@@ -208,3 +223,86 @@ def recurring_delete(request, rule_id):
     rule.delete()
     messages.success(request, "Recurring entry deleted.")
     return redirect("ledger:recurring")
+
+
+# --- Manage My Family --------------------------------------------------------
+
+
+def _require_head(request):
+    if not is_household_head(request.user):
+        raise PermissionDenied
+
+
+@login_required
+def family_index(request):
+    household = user_household(request.user)
+    member_rows = []
+    if household:
+        memberships = (
+            HouseholdMember.objects.filter(household=household)
+            .select_related("user", "user__profile")
+            .order_by("created_at", "id")
+        )
+        member_rows = [
+            {
+                "membership": m,
+                "user": m.user,
+                "is_head": m.user_id == household.head_id,
+                "is_me": m.user_id == request.user.id,
+            }
+            for m in memberships
+        ]
+    is_head = is_household_head(request.user)
+    return render(
+        request,
+        "ledger/family/index.html",
+        {
+            "household": household,
+            "member_rows": member_rows,
+            "is_head": is_head,
+            "add_form": AddMemberForm(household=household) if is_head else None,
+            "rename_form": RenameHouseholdForm(instance=household) if is_head else None,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def family_add_member(request):
+    _require_head(request)
+    household = user_household(request.user)
+    form = AddMemberForm(request.POST, household=household)
+    if form.is_valid():
+        member = form.save()
+        messages.success(request, f"Added {member.user.profile.label} to the family.")
+    else:
+        messages.error(request, form.errors.get("username", ["Could not add that user."])[0])
+    return redirect("ledger:family")
+
+
+@login_required
+@require_http_methods(["POST"])
+def family_remove_member(request, member_id):
+    _require_head(request)
+    household = user_household(request.user)
+    member = get_object_or_404(HouseholdMember, pk=member_id, household=household)
+    if member.user_id == household.head_id:
+        messages.error(request, "You can't remove the head of the family.")
+        return redirect("ledger:family")
+    name = member.user.profile.label
+    member.delete()
+    messages.success(request, f"Removed {name} from the family.")
+    return redirect("ledger:family")
+
+
+@login_required
+@require_http_methods(["POST"])
+def family_rename(request):
+    _require_head(request)
+    form = RenameHouseholdForm(request.POST, instance=user_household(request.user))
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Family name updated.")
+    else:
+        messages.error(request, "Please enter a valid family name.")
+    return redirect("ledger:family")

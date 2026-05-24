@@ -81,6 +81,18 @@ def user_household(user):
     return membership.household if membership else None
 
 
+def household_head(user):
+    """The head User of `user`'s household, or None."""
+    hh = user_household(user)
+    return hh.head if hh else None
+
+
+def is_household_head(user) -> bool:
+    """True when `user` is the head of their household (may manage members)."""
+    hh = user_household(user)
+    return bool(hh and hh.head_id == user.id)
+
+
 # ---------------------------------------------------------------------------
 # Recurring-rule materialisation
 # ---------------------------------------------------------------------------

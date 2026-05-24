@@ -12,9 +12,11 @@ Built with Django 5 + HTMX + Alpine.js + Tailwind v4 + ApexCharts. Single-develo
 
 ## Features
 
-- **Invite-only auth.** No public registration. The superuser bootstraps accounts via a CLI command. New users are forced to change their temporary password on first login.
+- **Invite-only auth.** No public registration. Superusers create accounts (from the web or the CLI); new users are forced to change their temporary password on first login.
 - **Income & expense ledger.** Two first-class kinds, each with a category (Salary, Food, Transport, … defaults ship; add your own). No accounts-with-balances, no transfers — just money in and money out.
 - **Household view.** Each person owns their ledger; a household toggle on the dashboard and reports sums both partners and breaks figures down per person.
+- **Manage My Family.** Every member sees the family roster; the **head of household** can add members (by username), remove them, and rename the family.
+- **User administration (superuser).** A web page to list every account, create users, and reset any user's password — no shell required.
 - **Rich, filterable dashboard.** Period income/expense/net summary, income-vs-expense bars, spending-by-category donut (tap to expand), budget pace bars, goal progress, and a latest-activity list — all filterable by period, category, and person. The summary reflects the active filter, so picking a category shows that category's spend.
 - **Budgets with pace.** Set a monthly limit per category; a bar shows spent-vs-limit with a marker for how much of the month has elapsed, flagging *on track / spending fast / over*.
 - **Savings goals.** Set a target (and optional date); track contributions and see the monthly amount needed to reach it.
@@ -93,7 +95,7 @@ Accepts `--date YYYY-MM-DD` for backfill and is idempotent. In production it run
 
 ### User management
 
-There's no web UI for creating users — that's deliberate. Use the management commands:
+Superusers manage accounts from the web (Settings → **Manage users**: list, create, reset passwords). The CLI commands remain, handy for bootstrapping the very first superuser:
 
 ```powershell
 python manage.py createuser <username> [--superuser] [--display-name "..."] [--password "..."]
