@@ -1,0 +1,44 @@
+{% load money %}
+{% for t in txns %}
+  <li class="flex items-center gap-3 px-4 py-3 anim-row">
+    <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
+      <i data-lucide="{{ t.category.icon }}" class="icon"></i>
+    </span>
+    <div class="flex-1 min-w-0">
+      <div class="font-medium text-brand-900 truncate">{{ t.category.name }}</div>
+      <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
+        <span class="truncate">
+          {{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}
+        </span>
+        {% if t.recurring_rule_id %}<span class="chip shrink-0"><i data-lucide="repeat" class="w-3 h-3"></i> Auto</span>{% endif %}
+      </div>
+    </div>
+    <div class="text-right shrink-0">
+      <div class="font-semibold num {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
+        {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
+      </div>
+      {% if t.owner_id == user.id %}
+        <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700">Edit</a>
+      {% else %}
+        <span class="text-[11px] text-brand-500">{{ t.owner.profile.label }}</span>
+      {% endif %}
+    </div>
+  </li>
+{% endfor %}
+{% comment %}
+  "Load older" loader row. Self-replacing: clicking it swaps THIS <li> (closest li,
+  outerHTML) with the next page's rows + a fresh loader — so rows accumulate as valid
+  <ul> children and the button moves down, or vanishes on the last page. The filter
+  form sends no `page`, so it always returns the full list and resets pagination.
+{% endcomment %}
+{% if page_obj.has_next %}
+  <li class="anim-row">
+    <button type="button"
+            hx-get="{% url 'transactions:index' %}?page={{ page_obj.next_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}"
+            hx-target="closest li" hx-swap="outerHTML" hx-disabled-elt="this"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-medium text-brand-700 hover:bg-brand-100/70 active:scale-[.99] transition-[transform,background-color] duration-150 ease-snap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40">
+      <span>Load older transactions</span>
+      <i data-lucide="chevron-down" class="w-4 h-4"></i>
+    </button>
+  </li>
+{% endif %}

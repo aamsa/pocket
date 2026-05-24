@@ -1,33 +1,9 @@
 {% load money %}
 
 {% if txns %}
+  <p class="text-[11px] uppercase tracking-wider text-brand-600 mb-2 px-1">{{ page_obj.paginator.count }} entr{{ page_obj.paginator.count|pluralize:"y,ies" }}</p>
   <ul class="card divide-y divide-brand-100 overflow-hidden">
-    {% for t in txns %}
-      <li class="flex items-center gap-3 px-4 py-3 anim-row">
-        <span class="w-9 h-9 rounded-xl grid place-items-center text-brand-50 shrink-0 bg-{{ t.category.color_token }}">
-          <i data-lucide="{{ t.category.icon }}" class="icon"></i>
-        </span>
-        <div class="flex-1 min-w-0">
-          <div class="font-medium text-brand-900 truncate">{{ t.category.name }}</div>
-          <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
-            <span class="truncate">
-              {{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}
-            </span>
-            {% if t.recurring_rule_id %}<span class="chip shrink-0"><i data-lucide="repeat" class="w-3 h-3"></i> Auto</span>{% endif %}
-          </div>
-        </div>
-        <div class="text-right shrink-0">
-          <div class="font-semibold num {% if t.kind == 'income' %}text-income{% else %}text-expense{% endif %}">
-            {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
-          </div>
-          {% if t.owner_id == user.id %}
-            <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700">Edit</a>
-          {% else %}
-            <span class="text-[11px] text-brand-500">{{ t.owner.profile.label }}</span>
-          {% endif %}
-        </div>
-      </li>
-    {% endfor %}
+    {% include "transactions/_rows.html" %}
   </ul>
 {% else %}
   <div class="card p-10 text-center text-sm text-brand-600">

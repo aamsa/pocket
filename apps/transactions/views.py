@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -37,10 +38,27 @@ def index(request):
     if cleaned.get("category"):
         qs = qs.filter(category=cleaned["category"])
 
-    txns = list(qs.order_by("-occurred_on", "-created_at")[:PAGE_SIZE])
+    paginator = Paginator(qs.order_by("-occurred_on", "-created_at"), PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get("page") or 1)
 
-    template = "transactions/_list.html" if request.headers.get("HX-Request") else "transactions/index.html"
-    return render(request, template, {"form": form, "txns": txns})
+    # Carry the active filters (minus `page`) onto the "Load older" button.
+    params = request.GET.copy()
+    params.pop("page", None)
+    filter_query = params.urlencode()
+
+    ctx = {
+        "form": form,
+        "page_obj": page_obj,
+        "txns": page_obj.object_list,
+        "filter_query": filter_query,
+    }
+    if request.headers.get("HX-Request"):
+        # A `page` param means the "Load older" button (append rows); the filter
+        # form never sends one, so it always lands on the full list partial.
+        template = "transactions/_rows.html" if request.GET.get("page") else "transactions/_list.html"
+    else:
+        template = "transactions/index.html"
+    return render(request, template, ctx)
 
 
 @login_required
