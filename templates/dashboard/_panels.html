@@ -1,84 +1,6 @@
 {% load money %}
 
-{# ---- Hero: net worth ---------------------------------------------------- #}
-<section class="card p-5 md:p-6 mb-4 overflow-hidden">
-  <div class="chart-mask chart-hidden"
-       x-data="{
-         _k: 'pocket-balance-vis:dashboard:networth',
-         visible: false,
-         init() { try { this.visible = localStorage.getItem(this._k) === '1'; } catch (e) {} },
-         toggle() {
-           this.visible = !this.visible;
-           try { localStorage.setItem(this._k, this.visible ? '1' : '0'); } catch (e) {}
-         }
-       }"
-       :class="{ 'chart-hidden': !visible }">
-    <div class="flex items-start justify-between gap-3 mb-1">
-      <div class="min-w-0">
-        <div class="text-xs uppercase tracking-wider text-brand-600">
-          {% if person == 'household' %}Household net worth{% else %}Net worth{% endif %}
-        </div>
-        <div class="mt-1">
-          {% include "partials/balance.html" with amount=balance key="dashboard:networth" text_class="text-2xl sm:text-3xl md:text-4xl font-semibold text-brand-900" %}
-        </div>
-      </div>
-    </div>
-
-    {% if breakdown %}
-      <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-brand-600 mb-3">
-        {% for b in breakdown %}
-          <span>{{ b.user.profile.label }}: <span class="num font-medium text-brand-800">{{ b.balance|rupiah }}</span></span>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    {% if net_worth.has_data %}
-      <div class="relative h-60 md:h-72 mt-2">
-        {{ net_worth.options|json_script:"chart-networth-data" }}
-        <div data-apex-chart data-source="chart-networth-data" class="w-full h-full"></div>
-        <div class="chart-overlay absolute inset-0 rounded-xl bg-brand-50/85 backdrop-blur-md grid place-items-center text-center">
-          <div>
-            <div class="num text-2xl font-semibold tracking-widest select-none text-brand-700">Rp ••••</div>
-            <p class="text-xs text-brand-600 mt-2">Tap the eye to reveal the trend.</p>
-          </div>
-        </div>
-        <button type="button" @click.stop.prevent="toggle()"
-                class="absolute top-0 right-0 text-brand-500 hover:text-brand-700 active:scale-90 p-2 rounded-full transition-[color,transform] duration-150 ease-snap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40"
-                :aria-label="visible ? 'Hide trend' : 'Show trend'">
-          <i data-lucide="eye"     class="chart-eye-show w-4 h-4"></i>
-          <i data-lucide="eye-off" class="chart-eye-hide w-4 h-4"></i>
-        </button>
-      </div>
-    {% else %}
-      <div class="h-40 grid place-items-center text-sm text-brand-600 text-center">
-        <div>
-          <i data-lucide="trending-up" class="w-9 h-9 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-          <p>The trend builds once daily snapshots run.<br>Set a starting balance in <a href="{% url 'accounts:profile' %}" class="underline">Settings</a>.</p>
-        </div>
-      </div>
-    {% endif %}
-  </div>
-</section>
-
-{# ---- Period income / expense / net --------------------------------------
-   One card. Stacked label→value rows on mobile (each amount gets the full
-   row width, so full IDR figures never truncate); 3-up on desktop. #}
-<section class="card p-4 md:p-5 mb-4">
-  <div class="grid grid-cols-1 lg:grid-cols-3 lg:gap-4 divide-y divide-brand-100 lg:divide-y-0">
-    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 lg:block lg:py-0">
-      <span class="text-[11px] uppercase tracking-wider text-brand-600 shrink-0">Income</span>
-      <span class="num font-semibold text-income text-lg lg:text-xl lg:block lg:mt-1">{{ income_total|rupiah }}</span>
-    </div>
-    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 lg:block lg:py-0">
-      <span class="text-[11px] uppercase tracking-wider text-brand-600 shrink-0">Expense</span>
-      <span class="num font-semibold text-expense text-lg lg:text-xl lg:block lg:mt-1">{{ expense_total|rupiah }}</span>
-    </div>
-    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 lg:block lg:py-0">
-      <span class="text-[11px] uppercase tracking-wider text-brand-600 shrink-0">Net</span>
-      <span class="num font-semibold text-lg lg:text-xl lg:block lg:mt-1 {% if net_total >= 0 %}text-income{% else %}text-expense{% endif %}">{% if net_total >= 0 %}+{% else %}−{% endif %}{{ net_total|abs_value|rupiah }}</span>
-    </div>
-  </div>
-</section>
+{% include "partials/period_summary.html" %}
 
 <div class="grid gap-4 md:grid-cols-2">
 
@@ -129,22 +51,6 @@
         <div>
           <i data-lucide="chart-pie" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
           <p>No expenses in this period.</p>
-        </div>
-      </div>
-    {% endif %}
-  </section>
-
-  {# ---- Source breakdown -------------------------------------------------- #}
-  <section class="card p-5 md:p-6 overflow-hidden">
-    <h2 class="text-base font-semibold text-brand-900 mb-3">Spending by source</h2>
-    {% if source_breakdown.has_data %}
-      {{ source_breakdown.options|json_script:"chart-source-data" }}
-      <div data-apex-chart data-source="chart-source-data" class="w-full h-64"></div>
-    {% else %}
-      <div class="h-64 grid place-items-center text-sm text-brand-600 text-center">
-        <div>
-          <i data-lucide="wallet" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-          <p>Tag entries with a source to see this.</p>
         </div>
       </div>
     {% endif %}
@@ -228,7 +134,6 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-medium text-brand-900 truncate">{{ t.category.name }}</span>
-                {% if t.source %}<span class="text-xs text-brand-600 shrink-0">· {{ t.source.name }}</span>{% endif %}
               </div>
               <div class="text-xs text-brand-600 truncate">{{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}</div>
             </div>

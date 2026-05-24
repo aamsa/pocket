@@ -4,7 +4,7 @@
     <i data-lucide="{{ r.category.icon }}" class="icon"></i>
   </span>
   <div class="flex-1 min-w-0">
-    <div class="font-medium text-brand-900 truncate">{{ r.category.name }}{% if r.source %} · {{ r.source.name }}{% endif %}</div>
+    <div class="font-medium text-brand-900 truncate">{{ r.category.name }}</div>
     <div class="text-xs text-brand-600 truncate">
       {{ r.get_cadence_display }} · next {{ r.next_run|date:"d M Y" }}{% if r.notes %} · {{ r.notes }}{% endif %}
     </div>

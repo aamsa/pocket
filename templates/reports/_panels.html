@@ -1,5 +1,7 @@
 {% load money %}
 
+{% include "partials/period_summary.html" %}
+
 <div class="grid gap-4 md:grid-cols-2">
 
   <section class="card p-5 md:p-6 md:col-span-2 overflow-hidden">
@@ -26,71 +28,10 @@
       <div class="h-72 grid place-items-center text-sm text-brand-600">
         <div class="text-center">
           <i data-lucide="chart-pie" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-          {% if category_id %}
-            <p>Filtered to one category — clear the filter to see the breakdown.</p>
-          {% else %}
-            <p>No expenses in this period.</p>
-          {% endif %}
+          <p>No expenses in this period.</p>
         </div>
       </div>
     {% endif %}
-  </section>
-
-  <section class="card p-5 md:p-6 overflow-hidden">
-    <h2 class="text-base font-semibold text-brand-900 mb-3">Spending by source</h2>
-    {% if source_breakdown.has_data %}
-      {{ source_breakdown.options|json_script:"chart-source-data" }}
-      <div data-apex-chart data-source="chart-source-data" class="w-full h-72"></div>
-    {% else %}
-      <div class="h-72 grid place-items-center text-sm text-brand-600">
-        <div class="text-center">
-          <i data-lucide="wallet" class="w-10 h-10 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>
-          <p>Tag entries with a source to see this.</p>
-        </div>
-      </div>
-    {% endif %}
-  </section>
-
-  <section class="card p-5 md:p-6 md:col-span-2 overflow-hidden">
-    <div class="chart-mask chart-hidden"
-         x-data="{
-           _k: 'pocket-balance-vis:dashboard:networth',
-           visible: false,
-           init() { try { this.visible = localStorage.getItem(this._k) === '1'; } catch (e) {} },
-           toggle() {
-             this.visible = !this.visible;
-             try { localStorage.setItem(this._k, this.visible ? '1' : '0'); } catch (e) {}
-           }
-         }"
-         :class="{ 'chart-hidden': !visible }">
-      <div class="flex items-center justify-between mb-3 gap-3">
-        <h2 class="text-base font-semibold text-brand-900">Net worth over time</h2>
-        {% if net_worth.has_data %}
-          <button type="button" @click.stop.prevent="toggle()"
-                  class="text-brand-500 hover:text-brand-700 active:scale-90 p-2 -m-2 rounded-full transition-[color,transform] duration-150 ease-snap focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40"
-                  :aria-label="visible ? 'Hide net worth' : 'Show net worth'">
-            <i data-lucide="eye"     class="chart-eye-show w-4 h-4"></i>
-            <i data-lucide="eye-off" class="chart-eye-hide w-4 h-4"></i>
-          </button>
-        {% endif %}
-      </div>
-      {% if net_worth.has_data %}
-        <div class="relative h-72">
-          {{ net_worth.options|json_script:"chart-networth-data" }}
-          <div data-apex-chart data-source="chart-networth-data" class="w-full h-full"></div>
-          <div class="chart-overlay absolute inset-0 rounded-xl bg-brand-50/85 backdrop-blur-md grid place-items-center text-center">
-            <div>
-              <div class="num text-2xl font-semibold tracking-widest select-none text-brand-700">Rp ••••</div>
-              <p class="text-xs text-brand-600 mt-2">Tap the eye to reveal the net-worth line.</p>
-            </div>
-          </div>
-        </div>
-      {% else %}
-        <div class="h-72 grid place-items-center text-sm text-brand-600 text-center">
-          <p>The trend builds once daily snapshots run.</p>
-        </div>
-      {% endif %}
-    </div>
   </section>
 
   <section class="card p-5 md:p-6 md:col-span-2 overflow-hidden">
@@ -106,7 +47,7 @@
                   <i data-lucide="{{ t.category.icon }}" class="w-4 h-4"></i>
                 </span>
                 <div class="flex-1 min-w-0 text-sm">
-                  <div class="text-brand-900 truncate">{{ t.category.name }}{% if t.source %} · {{ t.source.name }}{% endif %}</div>
+                  <div class="text-brand-900 truncate">{{ t.category.name }}</div>
                   <div class="text-xs text-brand-600">{{ t.occurred_on|date:"d M Y" }}</div>
                 </div>
                 <div class="text-income num font-semibold text-sm shrink-0">+{{ t.amount|rupiah }}</div>
@@ -127,7 +68,7 @@
                   <i data-lucide="{{ t.category.icon }}" class="w-4 h-4"></i>
                 </span>
                 <div class="flex-1 min-w-0 text-sm">
-                  <div class="text-brand-900 truncate">{{ t.category.name }}{% if t.source %} · {{ t.source.name }}{% endif %}</div>
+                  <div class="text-brand-900 truncate">{{ t.category.name }}</div>
                   <div class="text-xs text-brand-600">{{ t.occurred_on|date:"d M Y" }}</div>
                 </div>
                 <div class="text-expense num font-semibold text-sm shrink-0">−{{ t.amount|rupiah }}</div>

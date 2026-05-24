@@ -41,36 +41,6 @@ class HouseholdMember(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# Daily balance snapshot — powers the net-worth trend line.
-# One row per user per day; upserted by the snapshot_balances command.
-# ---------------------------------------------------------------------------
-
-
-class DailyBalanceSnapshot(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="balance_snapshots",
-    )
-    on_date = models.DateField(db_index=True)
-    balance = models.DecimalField(max_digits=14, decimal_places=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["on_date"]
-        indexes = [models.Index(fields=["user", "on_date"])]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "on_date"], name="snapshot_unique_user_date"
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.user} @ {self.on_date}: {self.balance}"
-
-
-# ---------------------------------------------------------------------------
 # Budget — a monthly per-category limit, with a "pace" signal.
 # ---------------------------------------------------------------------------
 
@@ -152,13 +122,6 @@ class RecurringRule(models.Model):
     amount = models.DecimalField(max_digits=14, decimal_places=0)
     category = models.ForeignKey(
         "transactions.Category", on_delete=models.PROTECT, related_name="recurring_rules"
-    )
-    source = models.ForeignKey(
-        "transactions.Source",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="recurring_rules",
     )
     notes = models.CharField(max_length=500, blank=True)
     cadence = models.CharField(max_length=8, choices=CADENCE_CHOICES, default=CADENCE_MONTHLY)

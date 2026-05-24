@@ -1,16 +1,15 @@
 """Money-domain business logic. Keep view-layer code thin.
 
-Covers: household scoping, running balance, daily snapshots, recurring-rule
-materialisation, budget pace, and goal projection.
+Covers: household scoping, recurring-rule materialisation, budget pace, and
+goal projection.
 """
 
 import calendar
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
 from django.db import transaction as db_transaction
-from django.db.models import Q, Sum
+from django.db.models import Sum
 
 
 # ---------------------------------------------------------------------------
@@ -83,70 +82,6 @@ def user_household(user):
 
 
 # ---------------------------------------------------------------------------
-# Running balance
-# ---------------------------------------------------------------------------
-
-
-def current_balance(user, as_of: date | None = None) -> Decimal:
-    """starting_balance + Σincome − Σexpense for `user`, up to `as_of` (today
-    by default). Transactions on/after `starting_balance_as_of` are counted;
-    the starting figure is the balance at the start of that date."""
-    from apps.transactions.models import Transaction
-
-    profile = user.profile
-    upto = as_of or date.today()
-    qs = Transaction.objects.filter(owner=user, occurred_on__lte=upto)
-    if profile.starting_balance_as_of:
-        qs = qs.filter(occurred_on__gte=profile.starting_balance_as_of)
-    agg = qs.aggregate(
-        income=Sum("amount", filter=Q(kind="income")),
-        expense=Sum("amount", filter=Q(kind="expense")),
-    )
-    income = agg["income"] or Decimal("0")
-    expense = agg["expense"] or Decimal("0")
-    return Decimal(profile.starting_balance) + Decimal(income) - Decimal(expense)
-
-
-def household_balance(user, as_of: date | None = None) -> Decimal:
-    return sum(
-        (current_balance(m, as_of) for m in household_members(user)), Decimal("0")
-    )
-
-
-def balance_breakdown(user, as_of: date | None = None) -> list:
-    """Per-member current balances, for the household card."""
-    return [
-        {"user": m, "balance": current_balance(m, as_of)}
-        for m in household_members(user)
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Daily snapshots
-# ---------------------------------------------------------------------------
-
-
-def write_snapshot(on_date: date | None = None) -> int:
-    """Upsert a balance snapshot per user for `on_date` (today by default).
-    Idempotent — safe to re-run. Returns the number of users snapshotted."""
-    from .models import DailyBalanceSnapshot
-
-    on_date = on_date or date.today()
-    User = get_user_model()
-    count = 0
-    for user in User.objects.filter(is_active=True):
-        if not hasattr(user, "profile"):
-            continue
-        DailyBalanceSnapshot.objects.update_or_create(
-            user=user,
-            on_date=on_date,
-            defaults={"balance": current_balance(user, on_date)},
-        )
-        count += 1
-    return count
-
-
-# ---------------------------------------------------------------------------
 # Recurring-rule materialisation
 # ---------------------------------------------------------------------------
 
@@ -178,7 +113,6 @@ def materialize_recurring(as_of: date | None = None) -> int:
                     kind=rule.kind,
                     amount=rule.amount,
                     category=rule.category,
-                    source=rule.source,
                     occurred_on=run_on,
                     notes=rule.notes,
                     owner=rule.owner,

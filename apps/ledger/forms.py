@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from django import forms
 
-from apps.transactions.models import Category, Source
+from apps.transactions.models import Category
 
 from .models import CADENCE_WEEKLY, Budget, Goal, RecurringRule
 from .services import _clamp_day_to_month, _shift_month
@@ -25,12 +25,6 @@ def _amount_field(label="Amount"):
         ),
         label=label,
     )
-
-
-def _household_sources(user):
-    from .services import user_household
-
-    return Source.objects.for_household(user_household(user)).active().order_by("name")
 
 
 class BudgetForm(forms.ModelForm):
@@ -120,11 +114,10 @@ class RecurringRuleForm(forms.ModelForm):
 
     class Meta:
         model = RecurringRule
-        fields = ["kind", "amount", "category", "source", "notes", "cadence", "anchor_day"]
+        fields = ["kind", "amount", "category", "notes", "cadence", "anchor_day"]
         widgets = {
             "kind": forms.Select(attrs={"class": input_class}),
             "category": forms.Select(attrs={"class": input_class}),
-            "source": forms.Select(attrs={"class": input_class}),
             "notes": forms.TextInput(attrs={"class": input_class, "placeholder": "Optional"}),
             "cadence": forms.Select(attrs={"class": input_class}),
             "anchor_day": forms.NumberInput(attrs={"class": input_class, "min": 0, "max": 28}),
@@ -135,8 +128,6 @@ class RecurringRuleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if user is not None:
             self.fields["category"].queryset = Category.objects.for_user(user).active()
-            self.fields["source"].queryset = _household_sources(user)
-            self.fields["source"].empty_label = "No source"
 
     def clean(self):
         cleaned = super().clean()

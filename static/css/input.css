@@ -125,36 +125,10 @@
 .htmx-swapping  { opacity: 0; transition: opacity 120ms var(--ease-snap); }
 .htmx-settling  { opacity: 1; transition: opacity 150ms var(--ease-snap); }
 
-/* Per-balance eye toggle: amount visible by default (no JS needed).
-   Alpine only adds .balance-hidden when toggled off. */
-.balance .balance-masked,
-.balance .balance-eye-hide { display: none; }
-.balance.balance-hidden .balance-visible,
-.balance.balance-hidden .balance-eye-show { display: none; }
-.balance.balance-hidden .balance-masked { display: inline; }
-.balance.balance-hidden .balance-eye-hide { display: inline-block; }
-
-/* Chart curtain: same pattern, applied to the Reports → Pocket balances chart.
-   Wrapper is `chart-mask chart-hidden` statically; Alpine removes `chart-hidden`
-   when localStorage says the user has revealed this chart before. The overlay
-   sits on top of the rendered chart so ApexCharts can still measure its width. */
-.chart-mask .chart-overlay {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 200ms var(--ease-snap);
-}
-.chart-mask.chart-hidden .chart-overlay {
-  opacity: 1;
-  pointer-events: auto;
-}
-.chart-mask .chart-eye-hide { display: none; }
-.chart-mask.chart-hidden .chart-eye-show { display: none; }
-.chart-mask.chart-hidden .chart-eye-hide { display: inline-block; }
-
 /* Reduced motion: keep opacity/colour cues, kill movement.
    Per Emil — reduce, don't remove. Comprehension stays intact.
    Universal `*:active` covers every active:scale-* utility in the app
-   (rows, tabs, sidebar, FAB, chart eye) without enumerating each. */
+   (rows, tabs, sidebar, FAB) without enumerating each. */
 @media (prefers-reduced-motion: reduce) {
   *:active { transform: none; }
   .animate-sheet-up,

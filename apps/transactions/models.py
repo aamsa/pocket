@@ -87,68 +87,8 @@ class Category(models.Model):
 
 
 # ---------------------------------------------------------------------------
-# Sources — an optional flat "where the money sits/comes from" tag.
-# NOT an account with a balance, NOT a tree, NO transfers. Just a label,
-# shared across the household so both partners pick from one list.
-# ---------------------------------------------------------------------------
-
-SOURCE_ICON_CHOICES = [
-    ("wallet", "Wallet"),
-    ("banknote", "Cash"),
-    ("coins", "Coins"),
-    ("credit-card", "Card"),
-    ("landmark", "Bank"),
-    ("smartphone", "E-wallet"),
-    ("building-2", "Institution"),
-    ("piggy-bank", "Savings"),
-    ("ellipsis", "Other"),
-]
-
-
-class SourceQuerySet(models.QuerySet):
-    def active(self):
-        return self.filter(archived_at__isnull=True)
-
-    def for_household(self, household):
-        if household is None:
-            return self.filter(household__isnull=True)
-        return self.filter(household=household)
-
-
-class Source(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=40)
-    icon = models.CharField(max_length=40, default="wallet", choices=SOURCE_ICON_CHOICES)
-    color_token = models.CharField(max_length=20, default="brand-500", choices=CATEGORY_COLOR_CHOICES)
-    household = models.ForeignKey(
-        "ledger.Household",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="sources",
-    )
-    archived_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    objects = SourceQuerySet.as_manager()
-
-    class Meta:
-        ordering = ["name"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["household", "name"],
-                name="source_unique_name_per_household",
-            ),
-        ]
-
-    def __str__(self):
-        return self.name
-
-
-# ---------------------------------------------------------------------------
 # Transactions — the whole core. Income or expense, owned by a person,
-# tagged with a category and (optionally) a source.
+# tagged with a category.
 # ---------------------------------------------------------------------------
 
 TXN_KIND_INCOME = "income"
@@ -184,13 +124,6 @@ class Transaction(models.Model):
     kind = models.CharField(max_length=8, choices=TXN_KIND_CHOICES)
     amount = models.DecimalField(max_digits=14, decimal_places=0)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name="transactions")
-    source = models.ForeignKey(
-        Source,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="transactions",
-    )
     occurred_on = models.DateField()
     notes = models.CharField(max_length=500, blank=True)
     owner = models.ForeignKey(
@@ -215,7 +148,6 @@ class Transaction(models.Model):
         indexes = [
             models.Index(fields=["owner", "-occurred_on"]),
             models.Index(fields=["category", "-occurred_on"]),
-            models.Index(fields=["source", "-occurred_on"]),
         ]
         constraints = [
             CheckConstraint(condition=Q(amount__gt=0), name="txn_amount_positive"),
