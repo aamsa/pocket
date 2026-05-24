@@ -151,7 +151,7 @@ def goal_delete(request, goal_id):
 
 @login_required
 def recurring_index(request):
-    rules = RecurringRule.objects.filter(owner=request.user).select_related("category", "source")
+    rules = RecurringRule.objects.filter(owner=request.user).select_related("category")
     return render(
         request,
         "ledger/recurring/index.html",

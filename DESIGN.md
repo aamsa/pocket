@@ -230,8 +230,11 @@ Components are deliberately rounded — `rounded-full` for pressables, `rounded-
 - **Bottom tabs (mobile):** `md:hidden`, fixed bottom, `buttercream/95` with backdrop-blur, top border `linen`. Five-column grid. Active item: `walnut` text. Inactive: `tobacco` text. Press feedback is `scale(.96)` over 100ms. No colour transition (frequent action).
 - **App bar:** Sticky top, `buttercream/85` with backdrop-blur, `linen` bottom border. 56px on mobile, 64px desktop.
 
-### Balance Eye Toggle (signature component)
-Every standing-balance figure renders inside the `balance.html` partial: `<span class="balance">` wraps the amount + a small eye icon. The wrapper carries `balance-hidden` statically so server HTML shows `Rp ••••` immediately — no JS-required reveal. Alpine reads `localStorage` on init and removes the class only if the user has previously revealed this exact key. The toggle button has `active:scale-90` press feedback; its hit target is enlarged with `p-2 -m-2` so taps land comfortably without changing the visible icon size.
+### Balance Eye Toggle (signature component) — REMOVED May 2026
+
+> Removed with the net-worth feature — no standing balances remain to hide. `templates/partials/balance.html`, the `.chart-mask` curtain, and the `pocket-balance-vis:` localStorage namespace are gone. Kept below as historical design rationale.
+
+Every standing-balance figure rendered inside the `balance.html` partial: `<span class="balance">` wraps the amount + a small eye icon. The wrapper carries `balance-hidden` statically so server HTML shows `Rp ••••` immediately — no JS-required reveal. Alpine reads `localStorage` on init and removes the class only if the user has previously revealed this exact key. The toggle button has `active:scale-90` press feedback; its hit target is enlarged with `p-2 -m-2` so taps land comfortably without changing the visible icon size.
 
 This component is load-bearing — the Alpine state is inlined in the partial (not registered via `Alpine.data()`) after a stale-cache incident on iOS Safari. Don't refactor it without preserving that.
 
@@ -241,7 +244,7 @@ The Reports → Pocket balances chart shares the same UX primitive but uses a si
 
 ### Do:
 - **Do** keep the cream-to-mocha brown ramp as the entire palette. New surfaces use existing shades; new accents do not exist.
-- **Do** render every standing balance through `templates/partials/balance.html`. The eye toggle is the central UX primitive of the product.
+- ~~**Do** render every standing balance through `templates/partials/balance.html`.~~ *(Removed May 2026 with net worth — no standing balances remain.)*
 - **Do** use tabular-nums (the `.num` utility) on every currency figure so digits column-align across rows.
 - **Do** use `--ease-snap` for UI transitions (160ms for state, 200ms for popovers) and `--ease-glide` for on-screen movement. Reach for `--animate-sheet-up`'s iOS-drawer curve only for the FAB sheet.
 - **Do** use `focus-visible:` rings on buttons and `focus:` rings on form inputs. Mouse press should not leave a stuck ring; keyboard focus must be visible.
@@ -259,7 +262,7 @@ The Reports → Pocket balances chart shares the same UX primitive but uses a si
 - **Don't** use `transition: all` or bare `transition` — specify the exact properties and the easing token. Never animate `width`, `height`, `padding`, or `margin`.
 - **Don't** use `ease-in` on UI. It delays the moment the user is watching most. The HTMX swap-in is `--ease-snap`, not `ease-in` — that was the canonical violation we fixed in the motion pass.
 - **Don't** add **gradient text** (`background-clip: text` over a gradient), **side-stripe borders** (colored `border-left > 1px` as an accent), or **glassmorphism** (decorative blur). Reach for solid colour, full borders, or nothing.
-- **Don't** add the **eye toggle** to anything that isn't a *standing balance*. Income/expense aggregates, transaction-row amounts, transfer rows, the Income vs Expense / Spending-by-category / Top transactions panels on Reports, the transaction-form input — all explicitly exempt. The Reports → Pocket balances chart **does** get a curtain (it shows running balances, the same primitive as standing-balance figures) but uses the chart-specific `.chart-mask` overlay rather than the `balance.html` partial.
+- *(Obsolete May 2026: the **eye toggle** / balance-hide system was removed with net worth. There are no standing balances; every figure renders plainly.)*
 - **Don't** introduce **nested cards**. If a card needs internal grouping, use spacing, dividers, or a label.
 - **Don't** use **animated icons, animated emoji, or any decorative motion** — motion serves spatial consistency, state indication, or HTMX swap continuity. Decoration is forbidden.
 - **Don't** use the Django **admin UI**. All admin actions are CLI commands or custom pages; the admin styling will violate every rule above.

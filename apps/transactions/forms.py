@@ -5,7 +5,6 @@ from django import forms
 from .models import (
     TXN_KIND_CHOICES,
     Category,
-    Source,
     Transaction,
 )
 
@@ -15,12 +14,6 @@ input_class = (
     "text-brand-900 placeholder-brand-400 focus:border-brand-500 "
     "focus:outline-none focus:ring-2 focus:ring-brand-300/40"
 )
-
-
-def _household_sources(user):
-    from apps.ledger.services import user_household
-
-    return Source.objects.for_household(user_household(user)).active().order_by("name")
 
 
 class TransactionForm(forms.ModelForm):
@@ -36,11 +29,10 @@ class TransactionForm(forms.ModelForm):
 
     class Meta:
         model = Transaction
-        fields = ["kind", "amount", "category", "source", "occurred_on", "notes"]
+        fields = ["kind", "amount", "category", "occurred_on", "notes"]
         widgets = {
             "kind": forms.HiddenInput(),
             "category": forms.Select(attrs={"class": input_class}),
-            "source": forms.Select(attrs={"class": input_class}),
             "occurred_on": forms.DateInput(
                 attrs={"class": input_class, "type": "date"},
                 format="%Y-%m-%d",
@@ -65,8 +57,6 @@ class TransactionForm(forms.ModelForm):
             if chosen_kind:
                 cat_qs = cat_qs.filter(kind=chosen_kind)
             self.fields["category"].queryset = cat_qs
-            self.fields["source"].queryset = _household_sources(user)
-            self.fields["source"].empty_label = "No source"
 
     def save(self, commit=True):
         obj = super().save(commit=False)
@@ -102,44 +92,6 @@ class CategoryForm(forms.ModelForm):
         return obj
 
 
-class SourceForm(forms.ModelForm):
-    class Meta:
-        model = Source
-        fields = ["name", "icon", "color_token"]
-        widgets = {
-            "name": forms.TextInput(attrs={"class": input_class, "autofocus": True}),
-            "icon": forms.Select(attrs={"class": input_class}),
-            "color_token": forms.Select(attrs={"class": input_class}),
-        }
-
-    def __init__(self, *args, user=None, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
-
-    def clean(self):
-        from apps.ledger.services import user_household
-
-        cleaned = super().clean()
-        name = cleaned.get("name")
-        if name and self.user is not None:
-            qs = Source.objects.filter(household=user_household(self.user), name=name)
-            if self.instance and self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
-            if qs.exists():
-                self.add_error("name", "A source with this name already exists.")
-        return cleaned
-
-    def save(self, commit=True):
-        from apps.ledger.services import user_household
-
-        obj = super().save(commit=False)
-        if obj.household_id is None:
-            obj.household = user_household(self.user)
-        if commit:
-            obj.save()
-        return obj
-
-
 class TransactionFilterForm(forms.Form):
     start = forms.DateField(required=False, widget=forms.DateInput(attrs={"class": input_class, "type": "date"}))
     end = forms.DateField(required=False, widget=forms.DateInput(attrs={"class": input_class, "type": "date"}))
@@ -154,12 +106,6 @@ class TransactionFilterForm(forms.Form):
         empty_label="All categories",
         widget=forms.Select(attrs={"class": input_class}),
     )
-    source = forms.ModelChoiceField(
-        required=False,
-        queryset=Source.objects.none(),
-        empty_label="All sources",
-        widget=forms.Select(attrs={"class": input_class}),
-    )
     person = forms.ChoiceField(
         required=False,
         choices=[("me", "Me"), ("household", "Everyone")],
@@ -170,4 +116,3 @@ class TransactionFilterForm(forms.Form):
         super().__init__(*args, **kwargs)
         if user is not None:
             self.fields["category"].queryset = Category.objects.for_user(user).active()
-            self.fields["source"].queryset = _household_sources(user)

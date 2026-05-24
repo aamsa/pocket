@@ -1,9 +1,9 @@
 """Chart data builders for the dashboard and reports page.
 
-All builders take `owner_ids` (the people whose ledger to include) plus
-optional `source_ids` / `category_id` filters, and return a dict with
-`has_data` + ApexCharts `options`. Initial render animates; period-swap
-re-renders don't (see `_ANIMATIONS`).
+All builders take `owner_ids` (the people whose ledger to include) plus an
+optional `category_id` filter, and return a dict with `has_data` + ApexCharts
+`options`. Initial render animates; period-swap re-renders don't (see
+`_ANIMATIONS`). `period_totals` returns the filtered income/expense/net sums.
 """
 
 from collections import defaultdict
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 
 from apps.transactions.models import Transaction
 
@@ -125,18 +125,6 @@ def _all_buckets(period: Period):
     return out
 
 
-def _bucket_asof(bucket: date, period: Period) -> date:
-    """Representative end date for a bucket, clamped to the period end."""
-    if period.granularity == "month":
-        import calendar
-
-        last = calendar.monthrange(bucket.year, bucket.month)[1]
-        end = bucket.replace(day=last)
-    else:
-        end = bucket
-    return min(end, period.end)
-
-
 _BASE_FONT = "Inter, sans-serif"
 _GRID_COLOR = "#F3D5B5"
 _AXIS_COLOR = "#6F4518"
@@ -154,7 +142,7 @@ _ANIMATIONS = {
 }
 
 
-def _scoped(owner_ids, period, *, source_ids=None, category_id=None, kind=None):
+def _scoped(owner_ids, period, *, category_id=None, kind=None):
     qs = Transaction.objects.filter(
         owner_id__in=owner_ids,
         occurred_on__gte=period.start,
@@ -162,11 +150,21 @@ def _scoped(owner_ids, period, *, source_ids=None, category_id=None, kind=None):
     )
     if kind:
         qs = qs.filter(kind=kind)
-    if source_ids:
-        qs = qs.filter(source_id__in=source_ids)
     if category_id:
         qs = qs.filter(category_id=category_id)
     return qs
+
+
+def period_totals(period: Period, *, owner_ids, category_id=None):
+    """Income / expense / net for the period, honouring the active filters.
+    Feeds the summary card so it reads as "amount for the applied filter"."""
+    agg = _scoped(owner_ids, period, category_id=category_id).aggregate(
+        income=Sum("amount", filter=Q(kind="income")),
+        expense=Sum("amount", filter=Q(kind="expense")),
+    )
+    income = int(agg["income"] or 0)
+    expense = int(agg["expense"] or 0)
+    return {"income": income, "expense": expense, "net": income - expense}
 
 
 # ---------------------------------------------------------------------------
@@ -174,8 +172,8 @@ def _scoped(owner_ids, period, *, source_ids=None, category_id=None, kind=None):
 # ---------------------------------------------------------------------------
 
 
-def income_vs_expense(period: Period, *, owner_ids, source_ids=None, category_id=None):
-    qs = _scoped(owner_ids, period, source_ids=source_ids, category_id=category_id)
+def income_vs_expense(period: Period, *, owner_ids, category_id=None):
+    qs = _scoped(owner_ids, period, category_id=category_id)
     income_buckets = defaultdict(Decimal)
     expense_buckets = defaultdict(Decimal)
     for row in qs.values("kind", "occurred_on").annotate(total=Sum("amount")):
@@ -222,9 +220,9 @@ def income_vs_expense(period: Period, *, owner_ids, source_ids=None, category_id
     }
 
 
-def spending_by_category(period: Period, *, owner_ids, source_ids=None):
+def spending_by_category(period: Period, *, owner_ids, category_id=None):
     qs = (
-        _scoped(owner_ids, period, source_ids=source_ids, kind="expense")
+        _scoped(owner_ids, period, category_id=category_id, kind="expense")
         .values("category_id", "category__name", "category__color_token")
         .annotate(total=Sum("amount"))
         .order_by("-total")[:8]
@@ -248,99 +246,9 @@ def spending_by_category(period: Period, *, owner_ids, source_ids=None):
     }
 
 
-def source_breakdown(period: Period, *, owner_ids, kind="expense"):
-    qs = (
-        _scoped(owner_ids, period, kind=kind)
-        .values("source__name", "source__color_token")
-        .annotate(total=Sum("amount"))
-        .order_by("-total")
-    )
-    labels = [(r["source__name"] or "No source") for r in qs]
-    series = [int(r["total"] or 0) for r in qs]
-    return {
-        "has_data": bool(series),
-        "options": {
-            "chart": {"type": "donut", "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
-            "labels": labels,
-            "series": series,
-            "colors": _BRAND_RAMP,
-            "dataLabels": {"enabled": False},
-            "legend": {"position": "bottom", "fontSize": "12px", "labels": {"colors": "#583101"}},
-            "stroke": {"width": 2, "colors": ["#FFFFFF"]},
-            "plotOptions": {"pie": {"donut": {"size": "62%"}}},
-            "tooltip": {},
-            "_format": "rupiah",
-        },
-    }
-
-
-def net_worth_over_time(period: Period, *, user_ids, series_name="Net worth"):
-    """Combined balance across `user_ids` over the period, fed by daily
-    snapshots. For each bucket we carry forward the latest snapshot on/before
-    the bucket's end date and sum across members."""
-    from apps.ledger.models import DailyBalanceSnapshot
-
-    snaps = (
-        DailyBalanceSnapshot.objects.filter(
-            user_id__in=user_ids, on_date__lte=period.end
-        )
-        .order_by("user_id", "on_date")
-        .values_list("user_id", "on_date", "balance")
-    )
-    by_user = defaultdict(list)
-    for uid, on_date, balance in snaps:
-        by_user[uid].append((on_date, Decimal(balance)))
-
-    def balance_as_of(rows, as_of):
-        val = Decimal("0")
-        for d, b in rows:
-            if d <= as_of:
-                val = b
-            else:
-                break
-        return val
-
-    buckets = _all_buckets(period)
-    labels = [_bucket_label(b, period.granularity) for b in buckets]
-    data = []
-    for b in buckets:
-        as_of = _bucket_asof(b, period)
-        total = sum((balance_as_of(by_user.get(uid, []), as_of) for uid in user_ids), Decimal("0"))
-        data.append(int(total))
-
-    has_data = bool(snaps) and any(data)
-    return {
-        "has_data": has_data,
-        "options": {
-            "chart": {"type": "area", "toolbar": {"show": False}, "fontFamily": _BASE_FONT, "animations": _ANIMATIONS},
-            "stroke": {"curve": "smooth", "width": 2},
-            "fill": {"type": "gradient", "gradient": {"opacityFrom": 0.45, "opacityTo": 0.08}},
-            "dataLabels": {"enabled": False},
-            "colors": [_BRAND_RAMP[0]],
-            "grid": {"borderColor": _GRID_COLOR, "strokeDashArray": 4},
-            "legend": {"show": False},
-            "xaxis": {
-                "categories": labels,
-                "tickAmount": 8,
-                "labels": {
-                    "rotate": -45,
-                    "rotateAlways": False,
-                    "hideOverlappingLabels": True,
-                    "trim": True,
-                    "style": {"colors": _AXIS_COLOR, "fontSize": "11px"},
-                },
-            },
-            "yaxis": {"labels": {"style": {"colors": _AXIS_COLOR, "fontSize": "11px"}}},
-            "tooltip": {"theme": "light"},
-            "series": [{"name": series_name, "data": data}],
-            "_format": "rupiah",
-        },
-    }
-
-
-def top_transactions(period: Period, *, owner_ids, source_ids=None, category_id=None, n=5):
-    qs = _scoped(owner_ids, period, source_ids=source_ids, category_id=category_id).select_related(
-        "source", "category", "owner", "owner__profile"
+def top_transactions(period: Period, *, owner_ids, category_id=None, n=5):
+    qs = _scoped(owner_ids, period, category_id=category_id).select_related(
+        "category", "owner", "owner__profile"
     )
     top_in = list(qs.filter(kind="income").order_by("-amount", "-occurred_on")[:n])
     top_out = list(qs.filter(kind="expense").order_by("-amount", "-occurred_on")[:n])

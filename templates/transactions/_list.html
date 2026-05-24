@@ -11,7 +11,7 @@
           <div class="font-medium text-brand-900 truncate">{{ t.category.name }}</div>
           <div class="flex items-center gap-1.5 mt-0.5 text-xs text-brand-600 min-w-0">
             <span class="truncate">
-              {% if t.source %}{{ t.source.name }} · {% endif %}{{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}
+              {{ t.occurred_on|date:"d M Y" }}{% if t.notes %} · {{ t.notes }}{% endif %}
             </span>
             {% if t.recurring_rule_id %}<span class="chip shrink-0"><i data-lucide="repeat" class="w-3 h-3"></i> Auto</span>{% endif %}
           </div>

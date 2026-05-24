@@ -1,0 +1,23 @@
+{% load money %}
+{# Period income / expense / net — reflects the active filters (period, who, category). Shared by the dashboard and reports panels. Wrapping layout so full IDR figures never clip: full-width label↔value rows on phones, stacked label→value blocks from sm up that wrap instead of overflowing. #}
+<section class="card p-4 md:p-5 mb-4">
+  <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-10 sm:gap-y-3 divide-y divide-brand-100 sm:divide-y-0">
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600 min-w-0 truncate">Income</span>
+      <span class="num font-semibold text-income text-lg sm:text-xl shrink-0 sm:block sm:mt-1">{{ income_total|rupiah }}</span>
+    </div>
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600 min-w-0 truncate">Expense</span>
+      <span class="num font-semibold text-expense text-lg sm:text-xl shrink-0 sm:block sm:mt-1">{{ expense_total|rupiah }}</span>
+    </div>
+    <div class="flex items-baseline justify-between gap-3 py-2.5 first:pt-0 last:pb-0 sm:block sm:py-0">
+      <span class="text-[11px] uppercase tracking-wider text-brand-600 min-w-0 truncate">Net</span>
+      <span class="num font-semibold text-lg sm:text-xl shrink-0 sm:block sm:mt-1 {% if net_total >= 0 %}text-income{% else %}text-expense{% endif %}">{% if net_total >= 0 %}+{% else %}−{% endif %}{{ net_total|abs_value|rupiah }}</span>
+    </div>
+  </div>
+  {% if selected_category %}
+    <p class="text-xs text-brand-600 mt-3 pt-3 border-t border-brand-100 truncate">
+      Filtered to <span class="font-medium text-brand-800">{{ selected_category.name }}</span> · {{ period.label }}
+    </p>
+  {% endif %}
+</section>

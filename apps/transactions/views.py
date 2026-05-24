@@ -6,11 +6,10 @@ from django.views.decorators.http import require_http_methods
 
 from .forms import (
     CategoryForm,
-    SourceForm,
     TransactionFilterForm,
     TransactionForm,
 )
-from .models import Category, Source, Transaction
+from .models import Category, Transaction
 
 
 PAGE_SIZE = 50
@@ -27,7 +26,7 @@ def index(request):
     owner_ids = household_user_ids(request.user) if person == "household" else [request.user.id]
 
     qs = Transaction.objects.filter(owner_id__in=owner_ids).select_related(
-        "source", "category", "owner", "owner__profile", "recurring_rule"
+        "category", "owner", "owner__profile", "recurring_rule"
     )
     if cleaned.get("start"):
         qs = qs.filter(occurred_on__gte=cleaned["start"])
@@ -37,8 +36,6 @@ def index(request):
         qs = qs.filter(kind=cleaned["kind"])
     if cleaned.get("category"):
         qs = qs.filter(category=cleaned["category"])
-    if cleaned.get("source"):
-        qs = qs.filter(source=cleaned["source"])
 
     txns = list(qs.order_by("-occurred_on", "-created_at")[:PAGE_SIZE])
 
@@ -58,10 +55,7 @@ def new(request):
             messages.success(request, f"{txn.get_kind_display()} of Rp {amount} saved.")
             return redirect("transactions:index")
     else:
-        initial = {}
-        if request.GET.get("source"):
-            initial["source"] = request.GET["source"]
-        form = TransactionForm(user=request.user, kind=kind, initial=initial)
+        form = TransactionForm(user=request.user, kind=kind)
     return render(
         request,
         "transactions/form.html",
@@ -144,69 +138,3 @@ def category_edit(request, category_id):
         "categories/form.html",
         {"form": form, "mode": "edit", "category": category},
     )
-
-
-# --- Sources ----------------------------------------------------------------
-
-
-@login_required
-def sources_index(request):
-    from apps.ledger.services import user_household
-
-    sources = (
-        Source.objects.for_household(user_household(request.user)).active().order_by("name")
-    )
-    return render(request, "sources/index.html", {"sources": sources})
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def source_new(request):
-    if request.method == "POST":
-        form = SourceForm(request.POST, user=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Source created.")
-            return redirect("transactions:sources")
-    else:
-        form = SourceForm(user=request.user)
-    return render(request, "sources/form.html", {"form": form, "mode": "new"})
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def source_edit(request, source_id):
-    from apps.ledger.services import user_household
-
-    source = get_object_or_404(Source, pk=source_id)
-    if source.household_id != getattr(user_household(request.user), "id", None):
-        raise PermissionDenied
-    if request.method == "POST":
-        form = SourceForm(request.POST, instance=source, user=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Source updated.")
-            return redirect("transactions:sources")
-    else:
-        form = SourceForm(instance=source, user=request.user)
-    return render(
-        request,
-        "sources/form.html",
-        {"form": form, "mode": "edit", "source": source},
-    )
-
-
-@login_required
-@require_http_methods(["POST"])
-def source_archive(request, source_id):
-    from django.utils import timezone
-
-    from apps.ledger.services import user_household
-
-    source = get_object_or_404(Source, pk=source_id)
-    if source.household_id != getattr(user_household(request.user), "id", None):
-        raise PermissionDenied
-    source.archived_at = timezone.now()
-    source.save(update_fields=["archived_at", "updated_at"])
-    messages.success(request, "Source archived.")
-    return redirect("transactions:sources")

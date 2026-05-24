@@ -22,17 +22,6 @@ DEFAULT_EXPENSE = [
     ("Other Expense", "ellipsis", "brand-200"),
 ]
 
-# Starter payment sources. Seeded with household=None; `seed_household`
-# assigns them to the household so both partners share one list.
-DEFAULT_SOURCES = [
-    ("Cash", "banknote", "brand-500"),
-    ("BCA", "landmark", "brand-700"),
-    ("GoPay", "smartphone", "brand-400"),
-    ("Card", "credit-card", "brand-600"),
-    ("Other", "ellipsis", "brand-300"),
-]
-
-
 @receiver(post_migrate)
 def seed_default_categories(sender, app_config, **kwargs):
     if app_config.label != "transactions":
@@ -41,7 +30,6 @@ def seed_default_categories(sender, app_config, **kwargs):
         CATEGORY_KIND_EXPENSE,
         CATEGORY_KIND_INCOME,
         Category,
-        Source,
     )
 
     if not Category.objects.filter(is_default=True).exists():
@@ -53,11 +41,3 @@ def seed_default_categories(sender, app_config, **kwargs):
             for n, icon, color in DEFAULT_EXPENSE
         ]
         Category.objects.bulk_create(rows)
-
-    if not Source.objects.exists():
-        Source.objects.bulk_create(
-            [
-                Source(name=n, icon=icon, color_token=color, household=None)
-                for n, icon, color in DEFAULT_SOURCES
-            ]
-        )

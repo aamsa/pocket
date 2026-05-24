@@ -25,15 +25,14 @@ The original model (a tree of **pockets** with **transfers** between them, **Poc
 
 **What the app is now:** a flat **income/expense ledger**.
 
-- **Models** — `Category` + `Source` + `Transaction` in `apps/transactions`; `Household`, `HouseholdMember`, `Budget`, `Goal`, `RecurringRule`, `DailyBalanceSnapshot` in the new `apps/ledger`. `Transaction` has `owner`, `category`, nullable `source`, `kind`, `amount`, `occurred_on`, `notes`, nullable `recurring_rule`. No pocket FK, no installment fields, no Transfer model.
-- **Net worth** — `UserProfile.starting_balance` + `starting_balance_as_of`; `apps/ledger/services.py::current_balance` runs it forward; `DailyBalanceSnapshot` (written nightly by `snapshot_balances`) feeds the trend chart.
-- **Source** — an optional, household-shared, flat payment-method tag. Not a balance, not a tree, never a transfer.
+> **Later change (May 2026, post-revamp):** net worth and payment **sources** were removed. Gone: `UserProfile.starting_balance`/`starting_balance_as_of`, `DailyBalanceSnapshot`, the `snapshot_balances` command, the `current_balance`/`household_balance` services, `net_worth_over_time`, the net-worth hero/trend chart, and the `balance.html` eye-toggle + `.chart-mask` curtain; plus the `Source` model, `Transaction.source`/`RecurringRule.source`, the source filter, the Sources CRUD, and the "Spending by source" chart. The dashboard/reports Income/Expense/Net summary now lives in `templates/partials/period_summary.html` (fed by `period_totals`), honours the category filter, and a single-category "Spending by category" donut renders instead of blanking. The bullets below are updated to match.
+
+- **Models** — `Category` + `Transaction` in `apps/transactions`; `Household`, `HouseholdMember`, `Budget`, `Goal`, `RecurringRule` in `apps/ledger`. `Transaction` has `owner`, `category`, `kind`, `amount`, `occurred_on`, `notes`, nullable `recurring_rule`. No pocket FK, no installment fields, no Transfer model, no source.
 - **Household** — replaces PocketShare. One `HouseholdMember` per user; `household_user_ids` / `scope_owner_ids` scope combined views. Seeded by the `seed_household` command.
 - **Budgets** — monthly per-category limits with a pace signal (`budget_status`). **Goals** — target + mutable `current_amount` (`goal_status`). **Recurring** — `RecurringRule` materialised by `run_recurring` (`materialize_recurring`), stamping `Transaction.recurring_rule` (renders an **Auto** chip).
-- **Dashboard** is the headline: filterable (period / category / source / person) net-worth hero, income-vs-expense, category & source donuts, budget pace, goal progress, latest activity. Reports page reuses the same builders.
-- **Scheduling** — two nightly `pocket-*` systemd timers (`run_recurring` then `snapshot_balances`); see DEPLOY.md. No n8n.
-- **Data** — migration history for `transactions`/`ledger` was reset; `accounts` got an additive `0002`. Dev is a fresh start. **Prod is migrated** via `manage.py import_legacy <dumpdata.json>` (export on old code → rebuild DB → import): pockets→sources, transfers dropped, owner=created_by, password hashes preserved. See DEPLOY.md "May 2026 ledger revamp (data migration)".
-- **Load-bearing** — the `balance.html` eye-toggle + `.chart-mask` curtain now wrap the **net-worth** figure/chart (key `pocket-balance-vis:dashboard:networth`); `current_balance` must filter `occurred_on >= starting_balance_as_of`; the net-worth trend is empty until `snapshot_balances` has run at least once.
+- **Dashboard** is the headline: filterable (period / category / person) Income/Expense/Net summary, income-vs-expense, spending-by-category donut, budget pace, goal progress, latest activity. Reports page reuses the same builders.
+- **Scheduling** — one nightly `pocket-maintenance` systemd timer (`run_recurring`); see DEPLOY.md. No n8n.
+- **Data** — migration history for `transactions`/`ledger` was reset; `accounts` got additive migrations. Dev is a fresh start. **Prod** was migrated once via the (now-removed) `import_legacy` command. See DEPLOY.md.
 
 The sections below are the original build history, kept for the motion/visual rationale.
 

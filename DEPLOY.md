@@ -90,12 +90,13 @@ sudo -u postgres psql -c "CREATE DATABASE pocket OWNER pocket;"
 sudo -u pocket bash -c 'set -a; . /etc/pocket.env; set +a; \
   .venv/bin/python manage.py migrate --noinput && \
   .venv/bin/python manage.py import_legacy /home/pocket/legacy.json && \
-  .venv/bin/python manage.py collectstatic --noinput && \
-  .venv/bin/python manage.py snapshot_balances'
+  .venv/bin/python manage.py collectstatic --noinput'
 systemctl start pocket
 ```
 
-`migrate` seeds default categories + starter sources; `import_legacy` recreates users (password hashes preserved → logins keep working), maps pockets→sources, imports transactions, and prints a balance report. No `createuser`/`seed_household` needed — the importer recreates the users and the household.
+`migrate` seeds default categories; `import_legacy` recreated users (password hashes preserved → logins keep working), imported transactions, and printed a balance report. No `createuser`/`seed_household` needed — the importer recreated the users and the household.
+
+> **Historical.** This section documents the one-time May 2026 cutover. The `import_legacy` and `snapshot_balances` commands, net-worth tracking, and payment **sources** were all removed in a later change and no longer exist — don't expect to re-run this verbatim.
 
 ### C. Verify
 
@@ -103,7 +104,7 @@ systemctl start pocket
 curl -sI https://pocket.ionyx.org/accounts/login/ -m 10 | head -1   # 200
 ```
 
-Log in as a real user (existing password works); the dashboard **net worth must match the pre-cutover total**; the transaction count matches the dump; the old pockets appear as sources. Then run the acceptance check at the bottom of this doc.
+Log in as a real user (existing password works); the transaction count matches the dump. Then run the acceptance check at the bottom of this doc.
 
 ### D. Rollback (if verify fails)
 
@@ -119,12 +120,12 @@ systemctl restart pocket
 
 ## Scheduled jobs (systemd timers)
 
-Two nightly management commands keep the ledger current. Run them as the `pocket` user, sourcing `/etc/pocket.env`, **recurring first** so the day's auto-entries are included in the snapshot. Use `pocket-*` names so co-tenant services are untouched.
+One nightly management command keeps the ledger current. Run it as the `pocket` user, sourcing `/etc/pocket.env`. Use `pocket-*` names so co-tenant services are untouched.
 
 `/etc/systemd/system/pocket-maintenance.service`:
 ```ini
 [Unit]
-Description=Pocket nightly maintenance (recurring + snapshot)
+Description=Pocket nightly maintenance (recurring)
 After=network.target postgresql.service
 
 [Service]
@@ -133,8 +134,9 @@ User=pocket
 WorkingDirectory=/home/pocket/apps/pocket
 EnvironmentFile=/etc/pocket.env
 ExecStart=/home/pocket/apps/pocket/.venv/bin/python manage.py run_recurring
-ExecStart=/home/pocket/apps/pocket/.venv/bin/python manage.py snapshot_balances
 ```
+
+> **Deploying the net-worth removal:** the unit used to carry a second `ExecStart=… manage.py snapshot_balances` line. Drop it (as above) and `systemctl daemon-reload`, so the timer stops invoking the now-deleted command.
 
 `/etc/systemd/system/pocket-maintenance.timer`:
 ```ini
@@ -149,7 +151,7 @@ Persistent=true
 WantedBy=timers.target
 ```
 
-Enable: `systemctl daemon-reload && systemctl enable --now pocket-maintenance.timer`. Check: `systemctl list-timers pocket-maintenance.timer` and `journalctl -u pocket-maintenance.service -n 50`. The timezone follows the droplet's (set to match Asia/Jakarta if needed). Both commands are idempotent, so a manual re-run or a `Persistent=true` catch-up after downtime is safe.
+Enable: `systemctl daemon-reload && systemctl enable --now pocket-maintenance.timer`. Check: `systemctl list-timers pocket-maintenance.timer` and `journalctl -u pocket-maintenance.service -n 50`. The timezone follows the droplet's (set to match Asia/Jakarta if needed). The command is idempotent, so a manual re-run or a `Persistent=true` catch-up after downtime is safe.
 
 ## Rollback
 

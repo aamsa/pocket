@@ -16,7 +16,7 @@
         hx-target="#report-panels"
         hx-trigger="change from:select, change from:input, submit"
         hx-push-url="true">
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
       <label class="flex flex-col gap-1.5 min-w-0">
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Period</span>
         <select name="period" class="input">
@@ -42,16 +42,6 @@
             <option value="{{ c.id }}" {% if category_id == c.id|stringformat:'s' %}selected{% endif %}>
               {{ c.name }} · {{ c.get_kind_display }}
             </option>
-          {% endfor %}
-        </select>
-      </label>
-
-      <label class="flex flex-col gap-1.5 min-w-0">
-        <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Source</span>
-        <select name="source" class="input">
-          <option value="">All sources</option>
-          {% for s in available_sources %}
-            <option value="{{ s.id }}" {% if source_id == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
           {% endfor %}
         </select>
       </label>
