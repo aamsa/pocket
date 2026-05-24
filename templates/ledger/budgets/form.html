@@ -33,14 +33,16 @@
         <button type="submit" class="btn-primary h-12">
           <i data-lucide="check" class="icon"></i> {% if mode == 'new' %}Save{% else %}Save changes{% endif %}
         </button>
-        {% if mode == 'edit' %}
-          <form method="post" action="{% url 'ledger:budget_delete' budget.id %}" onsubmit="return confirm('Remove this budget?');">{% csrf_token %}
-            <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
-              <i data-lucide="trash-2" class="icon"></i> Remove
-            </button>
-          </form>
-        {% endif %}
       </div>
     </form>
+
+    {# Delete is a sibling form, never nested inside the edit form (invalid HTML). #}
+    {% if mode == 'edit' %}
+      <form method="post" action="{% url 'ledger:budget_delete' budget.id %}" class="mt-2" onsubmit="return confirm('Remove this budget?');">{% csrf_token %}
+        <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
+          <i data-lucide="trash-2" class="icon"></i> Remove
+        </button>
+      </form>
+    {% endif %}
   </div>
 {% endblock %}

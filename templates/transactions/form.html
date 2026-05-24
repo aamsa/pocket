@@ -63,15 +63,17 @@
           <i data-lucide="check" class="icon"></i>
           {% if mode == 'new' %}Save{% else %}Save changes{% endif %}
         </button>
-        {% if mode == 'edit' %}
-          <form method="post" action="{% url 'transactions:delete' txn.id %}"
-                onsubmit="return confirm('Delete this transaction?');">{% csrf_token %}
-            <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
-              <i data-lucide="trash-2" class="icon"></i> Delete
-            </button>
-          </form>
-        {% endif %}
       </div>
     </form>
+
+    {# Delete is its OWN form, a sibling of the edit form — never nested (nested <form> is invalid HTML; the browser drops it and the button submits the edit form instead). #}
+    {% if mode == 'edit' %}
+      <form method="post" action="{% url 'transactions:delete' txn.id %}" class="mt-2"
+            onsubmit="return confirm('Delete this transaction?');">{% csrf_token %}
+        <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
+          <i data-lucide="trash-2" class="icon"></i> Delete
+        </button>
+      </form>
+    {% endif %}
   </div>
 {% endblock %}

@@ -51,14 +51,16 @@
         <button type="submit" class="btn-primary h-12">
           <i data-lucide="check" class="icon"></i> {% if mode == 'new' %}Create{% else %}Save changes{% endif %}
         </button>
-        {% if mode == 'edit' %}
-          <form method="post" action="{% url 'ledger:recurring_delete' rule.id %}" onsubmit="return confirm('Delete this recurring entry?');">{% csrf_token %}
-            <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
-              <i data-lucide="trash-2" class="icon"></i> Delete
-            </button>
-          </form>
-        {% endif %}
       </div>
     </form>
+
+    {# Delete is a sibling form, never nested inside the edit form (invalid HTML). #}
+    {% if mode == 'edit' %}
+      <form method="post" action="{% url 'ledger:recurring_delete' rule.id %}" class="mt-2" onsubmit="return confirm('Delete this recurring entry?');">{% csrf_token %}
+        <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
+          <i data-lucide="trash-2" class="icon"></i> Delete
+        </button>
+      </form>
+    {% endif %}
   </div>
 {% endblock %}
