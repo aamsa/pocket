@@ -31,7 +31,7 @@
           </div>
           <div class="text-xs text-brand-600 mt-1.5">
             {{ g.pct }}%
-            {% if g.complete %} · reached 🎉
+            {% if g.complete %} · Reached
             {% elif g.overdue %} · <span class="text-expense">target date passed</span>
             {% elif g.needed_per_month %} · {{ g.needed_per_month|rupiah }}/mo{% if g.days_left %} · {{ g.days_left }} days left{% endif %}
             {% endif %}

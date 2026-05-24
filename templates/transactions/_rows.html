@@ -18,7 +18,7 @@
         {% if t.kind == 'income' %}+{% else %}−{% endif %}{{ t.amount|rupiah }}
       </div>
       {% if t.owner_id == user.id %}
-        <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700">Edit</a>
+        <a href="{% url 'transactions:edit' t.id %}" class="text-[11px] text-brand-600 hover:text-brand-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40">Edit</a>
       {% else %}
         <span class="text-[11px] text-brand-500">{{ t.owner.profile.label }}</span>
       {% endif %}

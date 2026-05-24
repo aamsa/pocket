@@ -18,13 +18,13 @@ colors:
   card-surface:   "#FFFFFF"
 typography:
   display:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Newsreader, ui-serif, Georgia, serif"
     fontSize: "1.875rem"
     fontWeight: 600
     lineHeight: 1.15
     letterSpacing: "-0.02em"
   headline:
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "Newsreader, ui-serif, Georgia, serif"
     fontSize: "1.5rem"
     fontWeight: 600
     lineHeight: 1.2
@@ -162,11 +162,11 @@ A single warm-brown ramp anchors everything; sage and terracotta carry semantic 
 
 ## 3. Typography
 
-**Display Font:** Inter (with `ui-sans-serif`, `system-ui`, sans-serif fallbacks)
-**Body Font:** Inter (same family — single-stack)
+**Display Font (page titles / H1):** Newsreader — a warm display serif (with `ui-serif`, Georgia fallbacks), loaded via Google Fonts and applied to `h1` via `--font-display`.
+**Body Font:** Inter (everything else)
 **Numeric Treatment:** Inter with `font-variant-numeric: tabular-nums`
 
-**Character:** Inter is the chosen single voice — calm, modern, warm enough at 600 weight to sit on the cream surface without feeling clinical. Stylistic sets `ss01` and `cv11` are enabled globally to soften the `1` and the `a` toward a more humanist feel. The system does not use a serif or a mono; the warmth comes from the palette, not the type.
+**Character:** Inter carries the body — calm, modern, warm at 600 weight on cream. Stylistic sets `ss01` and `cv11` soften the `1` and `a` toward a humanist feel. Page titles (`h1`) wear **Newsreader**, a warm display serif, so headings read like an old ledger book; everything else stays Inter. No mono anywhere.
 
 ### Hierarchy
 - **Display** (600 / `1.875rem` / 1.15 / `-0.02em`): Page-title H1 on top-level routes (Dashboard, Pockets, Reports). Negative tracking pulls the form together at scale.
@@ -180,7 +180,7 @@ A single warm-brown ramp anchors everything; sage and terracotta carry semantic 
 
 **The Tabular Currency Rule.** Every IDR figure renders through the `rupiah` template filter and inherits `font-variant-numeric: tabular-nums` (the `.num` utility). Bare amounts without `.num` are forbidden — digits must align vertically across rows so the eye can scan a column without re-anchoring.
 
-**The Single-Voice Rule.** Inter is the only typeface in the product. No serif H1 for "editorial flair," no mono for "data feel." The warmth budget is spent on colour and motion, not type.
+**The Two-Voice Rule.** Exactly two typefaces: **Newsreader** (warm display serif) for page titles (`h1`, via `--font-display`), and **Inter** for everything else (body, labels, numbers). No third face, no mono. The serif gives headings a notebook warmth; Inter keeps the data legible. (Updated May 2026 from the original Inter-only rule, after a critique flagged the single common face as leaving headline personality unused.)
 
 ## 4. Elevation
 

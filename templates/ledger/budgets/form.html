@@ -38,7 +38,7 @@
 
     {# Delete is a sibling form, never nested inside the edit form (invalid HTML). #}
     {% if mode == 'edit' %}
-      <form method="post" action="{% url 'ledger:budget_delete' budget.id %}" class="mt-2" onsubmit="return confirm('Remove this budget?');">{% csrf_token %}
+      <form method="post" action="{% url 'ledger:budget_delete' budget.id %}" class="mt-2" onsubmit="return confirm('Remove the {{ budget.category.name|escapejs }} budget?');">{% csrf_token %}
         <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
           <i data-lucide="trash-2" class="icon"></i> Remove
         </button>

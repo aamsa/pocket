@@ -119,6 +119,14 @@ class TransactionQuerySet(models.QuerySet):
         return qs
 
 
+class LiveTransactionManager(models.Manager.from_queryset(TransactionQuerySet)):
+    """Default manager: excludes soft-deleted (archived) transactions, so they
+    disappear from every list/sum/chart app-wide without touching each query."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(archived_at__isnull=True)
+
+
 class Transaction(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     kind = models.CharField(max_length=8, choices=TXN_KIND_CHOICES)
@@ -140,8 +148,12 @@ class Transaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Soft delete: archived rows are hidden from the default `objects` manager
+    # (so they vanish from lists/sums/charts), but stay restorable via Undo.
+    archived_at = models.DateTimeField(null=True, blank=True)
 
-    objects = TransactionQuerySet.as_manager()
+    objects = LiveTransactionManager()                # live rows only — app-wide default
+    all_objects = TransactionQuerySet.as_manager()    # includes archived (restore)
 
     class Meta:
         ordering = ["-occurred_on", "-created_at"]

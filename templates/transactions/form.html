@@ -37,6 +37,7 @@
                  class="input pl-10 num text-lg" placeholder="0" />
         </div>
         <input type="hidden" name="amount" :value="amount.replace(/\D+/g,'')" />
+        <span class="text-xs text-brand-600">e.g. 1.250.000</span>
         {% for err in form.amount.errors %}<span class="text-xs text-expense">{{ err }}</span>{% endfor %}
       </label>
 
@@ -69,7 +70,7 @@
     {# Delete is its OWN form, a sibling of the edit form — never nested (nested <form> is invalid HTML; the browser drops it and the button submits the edit form instead). #}
     {% if mode == 'edit' %}
       <form method="post" action="{% url 'transactions:delete' txn.id %}" class="mt-2"
-            onsubmit="return confirm('Delete this transaction?');">{% csrf_token %}
+            onsubmit="return confirm('Delete {{ txn.category.name|escapejs }}, {{ txn.amount|rupiah }}, {{ txn.occurred_on|date:'d M Y' }}? You can undo it.');">{% csrf_token %}
         <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
           <i data-lucide="trash-2" class="icon"></i> Delete
         </button>

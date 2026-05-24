@@ -25,6 +25,7 @@
   --color-expense: #9C3D2E;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
 
   --shadow-card: 0 1px 2px 0 rgb(88 49 1 / 0.04), 0 1px 3px 0 rgb(88 49 1 / 0.08);
   --shadow-pop:  0 8px 24px -6px rgb(88 49 1 / 0.18);
@@ -113,6 +114,13 @@
   }
 }
 
+/* Two-voice typography: page titles (h1) wear the warm Newsreader serif; body
+   stays Inter. Size/weight utilities on each h1 still apply — this only sets the
+   family. Keep h1 for page titles only so the serif stays a headline accent. */
+@layer base {
+  h1 { font-family: var(--font-display); }
+}
+
 /* Subtle entrance for list rows (transaction log, budgets, goals, recurring).
    Opacity-only fade so it degrades cleanly under reduced motion and re-runs
    pleasantly on HTMX swaps. */
@@ -125,6 +133,16 @@
 .htmx-swapping  { opacity: 0; transition: opacity 120ms var(--ease-snap); }
 .htmx-settling  { opacity: 1; transition: opacity 150ms var(--ease-snap); }
 
+/* Chart skeleton: a calm pulse on a [data-apex-chart] container until app.js
+   hydrates it (class removed on render). Fills the brief void during HTMX
+   swaps and before ApexCharts loads. Opacity-only — reduced-motion safe. */
+.chart-skeleton {
+  border-radius: 0.75rem;
+  background-color: color-mix(in oklab, var(--color-brand-100), transparent 35%);
+  animation: chart-pulse 1.4s var(--ease-snap) infinite;
+}
+@keyframes chart-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+
 /* Reduced motion: keep opacity/colour cues, kill movement.
    Per Emil — reduce, don't remove. Comprehension stays intact.
    Universal `*:active` covers every active:scale-* utility in the app
@@ -133,4 +151,5 @@
   *:active { transform: none; }
   .animate-sheet-up,
   .animate-slide-up { animation: var(--animate-fade-in); }
+  .chart-skeleton { animation: none; }
 }

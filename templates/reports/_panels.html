@@ -8,7 +8,7 @@
     <h2 class="text-base font-semibold text-brand-900 mb-3">Income vs Expense</h2>
     {% if income_vs_expense.has_data %}
       {{ income_vs_expense.options|json_script:"chart-income-expense-data" }}
-      <div data-apex-chart data-source="chart-income-expense-data" class="w-full h-72"></div>
+      <div data-apex-chart data-source="chart-income-expense-data" class="w-full h-72 chart-skeleton"></div>
     {% else %}
       <div class="h-56 grid place-items-center text-sm text-brand-600">
         <div class="text-center">
@@ -23,7 +23,7 @@
     <h2 class="text-base font-semibold text-brand-900 mb-3">Spending by category</h2>
     {% if spending_by_category.has_data %}
       {{ spending_by_category.options|json_script:"chart-by-cat-data" }}
-      <div data-apex-chart data-source="chart-by-cat-data" class="w-full h-72"></div>
+      <div data-apex-chart data-source="chart-by-cat-data" class="w-full h-72 chart-skeleton"></div>
     {% else %}
       <div class="h-72 grid place-items-center text-sm text-brand-600">
         <div class="text-center">

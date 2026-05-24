@@ -33,7 +33,7 @@
               {% if not row.u.is_active %}<span class="chip shrink-0">Disabled</span>{% endif %}
             </div>
           </div>
-          <a href="{% url 'accounts:user_set_password' row.u.id %}" class="text-[11px] text-brand-600 hover:text-brand-900 shrink-0">Set password</a>
+          <a href="{% url 'accounts:user_set_password' row.u.id %}" class="text-[11px] text-brand-600 hover:text-brand-900 shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40">Set password</a>
         </li>
       {% endfor %}
     </ul>

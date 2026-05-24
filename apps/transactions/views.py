@@ -1,8 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from .forms import (
@@ -46,11 +48,33 @@ def index(request):
     params.pop("page", None)
     filter_query = params.urlencode()
 
+    # Count active filters for the mobile "Filters" disclosure badge.
+    filter_count = sum(1 for k in ("start", "end", "kind", "category") if cleaned.get(k))
+    if person != "me":
+        filter_count += 1
+
+    # A just-deleted transaction (?undo=<id>) offers a one-tap restore banner.
+    undo_txn = None
+    undo_id = request.GET.get("undo")
+    if undo_id:
+        try:
+            undo_txn = (
+                Transaction.all_objects.filter(
+                    pk=undo_id, owner=request.user, archived_at__isnull=False
+                )
+                .select_related("category")
+                .first()
+            )
+        except (ValueError, ValidationError):
+            undo_txn = None
+
     ctx = {
         "form": form,
         "page_obj": page_obj,
         "txns": page_obj.object_list,
         "filter_query": filter_query,
+        "filter_count": filter_count,
+        "undo_txn": undo_txn,
     }
     if request.headers.get("HX-Request"):
         # A `page` param means the "Load older" button (append rows); the filter
@@ -104,8 +128,20 @@ def edit(request, txn_id):
 @require_http_methods(["POST"])
 def delete(request, txn_id):
     txn = get_object_or_404(Transaction, pk=txn_id, owner=request.user)
-    txn.delete()
+    # Soft delete so it can be undone; hidden everywhere by the default manager.
+    txn.archived_at = timezone.now()
+    txn.save(update_fields=["archived_at"])
     messages.success(request, "Transaction deleted.")
+    return redirect(f"{reverse('transactions:index')}?undo={txn.id}")
+
+
+@login_required
+@require_http_methods(["POST"])
+def undo_delete(request, txn_id):
+    Transaction.all_objects.filter(
+        pk=txn_id, owner=request.user, archived_at__isnull=False
+    ).update(archived_at=None)
+    messages.success(request, "Transaction restored.")
     return redirect("transactions:index")
 
 

@@ -3,26 +3,26 @@
   <div class="grid grid-cols-5 max-w-md mx-auto">
     <a href="{% url 'core:dashboard' %}"
        class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
-              {% if path == '/' %}text-brand-900{% else %}text-brand-600{% endif %}">
+              {% if path == '/' %}text-brand-900{% else %}text-brand-700{% endif %}">
       <i data-lucide="layout-dashboard" class="icon"></i>
       <span>Home</span>
     </a>
     <a href="{% url 'transactions:index' %}"
        class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
-              {% if '/transactions' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
+              {% if '/transactions' in path %}text-brand-900{% else %}text-brand-700{% endif %}">
       <i data-lucide="arrow-left-right" class="icon"></i>
       <span>Activity</span>
     </a>
     <span aria-hidden="true"></span>
     <a href="{% url 'ledger:budgets' %}"
        class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
-              {% if '/ledger/budgets' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
+              {% if '/ledger/budgets' in path %}text-brand-900{% else %}text-brand-700{% endif %}">
       <i data-lucide="target" class="icon"></i>
       <span>Budgets</span>
     </a>
     <a href="{% url 'accounts:profile' %}"
        class="flex flex-col items-center gap-0.5 py-2 text-[11px] active:scale-[.96] transition-transform duration-100 ease-snap
-              {% if '/accounts/settings' in path %}text-brand-900{% else %}text-brand-600{% endif %}">
+              {% if '/accounts/settings' in path %}text-brand-900{% else %}text-brand-700{% endif %}">
       <i data-lucide="user" class="icon"></i>
       <span>More</span>
     </a>

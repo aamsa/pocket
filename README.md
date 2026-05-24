@@ -13,7 +13,7 @@ Built with Django 5 + HTMX + Alpine.js + Tailwind v4 + ApexCharts. Single-develo
 ## Features
 
 - **Invite-only auth.** No public registration. Superusers create accounts (from the web or the CLI); new users are forced to change their temporary password on first login.
-- **Income & expense ledger.** Two first-class kinds, each with a category (Salary, Food, Transport, … defaults ship; add your own). No accounts-with-balances, no transfers — just money in and money out.
+- **Income & expense ledger.** Two first-class kinds, each with a category (Salary, Food, Transport, … defaults ship; add your own). No accounts-with-balances, no transfers — just money in and money out. Deleting an entry is reversible (one-tap Undo).
 - **Household view.** Each person owns their ledger; a household toggle on the dashboard and reports sums both partners and breaks figures down per person.
 - **Manage My Family.** Every member sees the family roster; the **head of household** can add members (by username), remove them, and rename the family.
 - **User administration (superuser).** A web page to list every account, create users, and reset any user's password — no shell required.

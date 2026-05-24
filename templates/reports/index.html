@@ -30,7 +30,12 @@
         <span class="text-[11px] font-medium text-brand-700 uppercase tracking-wide">Who</span>
         <select name="person" class="input">
           <option value="me" {% if person == 'me' %}selected{% endif %}>Me</option>
-          <option value="household" {% if person == 'household' %}selected{% endif %}>Everyone</option>
+          {% for m in other_members %}
+            <option value="{{ m.id }}" {% if person == m.id|stringformat:'s' %}selected{% endif %}>{{ m.profile.label }}</option>
+          {% endfor %}
+          {% if members|length > 1 %}
+            <option value="household" {% if person == 'household' %}selected{% endif %}>Everyone</option>
+          {% endif %}
         </select>
       </label>
 

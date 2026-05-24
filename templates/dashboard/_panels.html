@@ -9,7 +9,7 @@
     <h2 class="text-base font-semibold text-brand-900 mb-3">Income vs Expense</h2>
     {% if income_vs_expense.has_data %}
       {{ income_vs_expense.options|json_script:"chart-income-expense-data" }}
-      <div data-apex-chart data-source="chart-income-expense-data" class="w-full h-72"></div>
+      <div data-apex-chart data-source="chart-income-expense-data" class="w-full h-72 chart-skeleton"></div>
     {% else %}
       <div class="h-48 grid place-items-center text-sm text-brand-600">
         <div class="text-center">
@@ -33,7 +33,7 @@
     </div>
     {% if spending_by_category.has_data %}
       {{ spending_by_category.options|json_script:"chart-by-cat-data" }}
-      <div data-apex-chart data-source="chart-by-cat-data" class="w-full h-64"></div>
+      <div data-apex-chart data-source="chart-by-cat-data" class="w-full h-64 chart-skeleton"></div>
       <div x-show="expanded" x-cloak
            x-transition:enter="transition ease-snap duration-200"
            x-transition:enter-start="opacity-0 -translate-y-1"
@@ -105,7 +105,7 @@
               <div class="absolute inset-y-0 left-0 rounded-full bg-brand-600 transition-[width] duration-500 ease-snap" style="width: {{ g.pct }}%"></div>
             </div>
             <div class="text-xs text-brand-600 mt-1">
-              {{ g.pct }}%{% if g.needed_per_month %} · {{ g.needed_per_month|rupiah }}/mo to reach it{% elif g.complete %} · reached 🎉{% endif %}
+              {{ g.pct }}%{% if g.needed_per_month %} · {{ g.needed_per_month|rupiah }}/mo to reach it{% elif g.complete %} · Reached{% endif %}
             </div>
           </div>
         {% endfor %}

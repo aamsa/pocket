@@ -31,12 +31,17 @@
             {% elif is_head %}
               <form method="post" action="{% url 'ledger:family_remove_member' row.membership.id %}"
                     onsubmit="return confirm('Remove {{ row.user.profile.label }} from the family?');">{% csrf_token %}
-                <button type="submit" class="text-[11px] text-brand-600 hover:text-expense shrink-0">Remove</button>
+                <button type="submit" class="text-[11px] text-brand-600 hover:text-expense shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300/40">Remove</button>
               </form>
             {% endif %}
           </li>
         {% endfor %}
       </ul>
+
+      <p class="mt-3 text-xs text-brand-600 inline-flex items-center gap-1.5">
+        <i data-lucide="crown" class="w-3 h-3 shrink-0"></i>
+        Head of the family — the only member who can add or remove people.
+      </p>
 
       {% if is_head %}
         <div class="card p-5 md:p-6 mt-4">

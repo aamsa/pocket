@@ -1,9 +1,21 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}Transactions · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
   {% include "partials/messages.html" %}
+
+  {% if undo_txn %}
+    <div class="card p-4 mb-4 flex items-center justify-between gap-3 anim-row">
+      <span class="text-sm text-brand-700 min-w-0 truncate">
+        Deleted <span class="font-medium text-brand-900">{{ undo_txn.category.name }} · {% if undo_txn.kind == 'income' %}+{% else %}−{% endif %}{{ undo_txn.amount|rupiah }}</span>
+      </span>
+      <form method="post" action="{% url 'transactions:undo_delete' undo_txn.id %}" class="shrink-0">{% csrf_token %}
+        <button type="submit" class="btn-secondary"><i data-lucide="undo-2" class="icon"></i> Undo</button>
+      </form>
+    </div>
+  {% endif %}
 
   <div class="flex items-end justify-between gap-3 mb-5">
     <div class="min-w-0 flex-1">
@@ -21,7 +33,18 @@
     </div>
   </div>
 
-  <form class="card p-4 md:p-5 mb-5"
+  <div x-data="{ open: false }" class="mb-5">
+    <button type="button" @click="open = !open"
+            class="btn-secondary w-full justify-between md:hidden"
+            :aria-expanded="open ? 'true' : 'false'">
+      <span class="inline-flex items-center gap-2">
+        <i data-lucide="sliders-horizontal" class="icon"></i> Filters
+        {% if filter_count %}<span class="chip">{{ filter_count }}</span>{% endif %}
+      </span>
+      <i data-lucide="chevron-down" class="icon transition-transform duration-150 ease-snap" :class="open && 'rotate-180'"></i>
+    </button>
+  <form class="card p-4 md:p-5 mt-3 md:mt-0 hidden md:block"
+        :class="{ '!block': open }"
         hx-get="{% url 'transactions:index' %}"
         hx-target="#txn-list"
         hx-trigger="change from:select, change from:input[type=date]"
@@ -49,6 +72,7 @@
       </label>
     </div>
   </form>
+  </div>
 
   <div id="txn-list">
     {% include "transactions/_list.html" %}

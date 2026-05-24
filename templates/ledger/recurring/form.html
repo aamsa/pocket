@@ -56,7 +56,7 @@
 
     {# Delete is a sibling form, never nested inside the edit form (invalid HTML). #}
     {% if mode == 'edit' %}
-      <form method="post" action="{% url 'ledger:recurring_delete' rule.id %}" class="mt-2" onsubmit="return confirm('Delete this recurring entry?');">{% csrf_token %}
+      <form method="post" action="{% url 'ledger:recurring_delete' rule.id %}" class="mt-2" onsubmit="return confirm('Delete the recurring {{ rule.category.name|escapejs }} entry?');">{% csrf_token %}
         <button type="submit" class="btn-ghost text-expense w-full hover:bg-expense/10">
           <i data-lucide="trash-2" class="icon"></i> Delete
         </button>

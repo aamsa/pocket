@@ -26,10 +26,23 @@
     return options;
   }
 
+  function showChartError(el) {
+    el.classList.remove("chart-skeleton");
+    el.innerHTML =
+      '<div class="h-full grid place-items-center text-center text-sm text-brand-600">' +
+      '<div><i data-lucide="unplug" class="w-8 h-8 mx-auto mb-2 stroke-[1.5] text-brand-300"></i>' +
+      "<p>Couldn't load this chart. Refresh to retry.</p></div></div>";
+    renderIcons();
+  }
+
   function hydrateCharts(root) {
-    if (!window.ApexCharts) return;
     var nodes = (root || document).querySelectorAll("[data-apex-chart]");
     nodes.forEach(function (el) {
+      // ApexCharts CDN unavailable: leave a quiet fallback, not an empty box.
+      if (!window.ApexCharts) {
+        showChartError(el);
+        return;
+      }
       if (el.__apexInstance) {
         el.__apexInstance.destroy();
         el.__apexInstance = null;
@@ -40,10 +53,21 @@
       try {
         var options = applyFormatters(JSON.parse(dataNode.textContent));
         var chart = new ApexCharts(el, options);
-        chart.render();
         el.__apexInstance = chart;
+        var p = chart.render();
+        if (p && typeof p.then === "function") {
+          p.then(function () {
+            el.classList.remove("chart-skeleton");
+          }).catch(function (err) {
+            console.error("Chart render failed", err);
+            showChartError(el);
+          });
+        } else {
+          el.classList.remove("chart-skeleton");
+        }
       } catch (err) {
         console.error("Chart hydration failed", err);
+        showChartError(el);
       }
     });
   }

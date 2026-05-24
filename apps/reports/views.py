@@ -3,6 +3,7 @@ from datetime import date
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from apps.ledger.services import household_members
 from apps.transactions.models import Category
 
 from .services import (
@@ -35,6 +36,8 @@ def index(request):
     person = request.GET.get("person") or "me"
     category_id = request.GET.get("category") or None
 
+    members = household_members(request.user)
+    other_members = [m for m in members if m.id != request.user.id]
     owner_ids = scope_owner_ids(request.user, person)
 
     available_categories = (
@@ -55,6 +58,8 @@ def index(request):
         "custom_start": custom_start.isoformat() if custom_start else "",
         "custom_end": custom_end.isoformat() if custom_end else "",
         "person": person,
+        "members": members,
+        "other_members": other_members,
         "category_id": category_id,
         "selected_category": selected_category,
         "available_categories": available_categories,
